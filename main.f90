@@ -92,10 +92,10 @@ program relatvistic_ed
   STOP
   !now try to find unique number of electrons in each of the spaces
 
-  call unique_elements(k-1,scratch_int(1:k-1),scratch_int(k),count_unique)
-  do i=1,count_unique
-     write(*,*)"unique el num",i,scratch_int(k+i)
-  end do
+!  call unique_elements(k-1,scratch_int(1:k-1),scratch_int(k),count_unique)
+!  do i=1,count_unique
+!     write(*,*)"unique el num",i,scratch_int(k+i)
+!  end do
   
 
 end program relatvistic_ed

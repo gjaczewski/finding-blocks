@@ -124,7 +124,7 @@ subroutine fill_RAS_electron_array(relativistic,norb,n_RAS_spaces_occ,RAS_space_
   ! for alpha electrons
   call fill_RAS_spaces_per_spin(n_alpha,NRD_spin_tmp,NRD_spin_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,excit_array,RAS_el_array_alpha)
 
-  
+  STOP
   ! for beta electrons
 !  call fill_RAS_spaces_per_spin(n_beta,NRD_spin_tmp,NRD_spin_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,excit_array,RAS_el_array_beta)
 
@@ -149,76 +149,186 @@ end if
 end subroutine fill_RAS_electron_array
   
   
-subroutine fill_RAS_spaces_per_spin(n_spin,NRD_spin_tmp,NRD_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,excit_array,RAS_el_array_spin)
+subroutine fill_RAS_spaces_per_spin(n_spin,NRD_spin_tmp,NRD_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,excit_array,RAS_dis_temp,RAS_dis)
   implicit none
   integer, intent(in) :: n_spin
   integer, intent(in) :: n_RAS_spaces_occ,n_RAS_spaces_virt,active_space
   integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt),excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
   integer, intent(in) :: NRD_spin_tmp
   integer, intent(inout):: NRD_spin
-  integer, intent(inout):: RAS_el_array_spin(NRD_spin_tmp,n_RAS_spaces_occ+n_RAS_spaces_virt+1)
+  integer, intent(inout):: RAS_dis(NRD_spin_tmp,n_RAS_spaces_occ+n_RAS_spaces_virt+1)
+  integer:: verbose
+  
 
-  integer, dimension(:,:), allocatable::occ_RAS_el,virt_RAS_el
+  
+  integer, dimension(:,:), allocatable::occ_RAS_el,virt_RAS_el,RAS_dis_temp
   integer, dimension(:), allocatable::counter
-  integer:: n_el_temp
-  integer:: i,j,k,l
+  integer:: n_el_temp,active_el,NRD_good
+  integer:: i,j,k,l,m,n,p,q
   logical:: count_possibilities,fill
-  
+  double precision, dimension(:), allocatable::scratch
   !NRD_spin - number of possible electron distributions for a given alpha or beta spin
-  
-  
-  
-  do i=1,n_RAS_spaces_occ   
-     do j=excit_array(i),0,-1
-        do k=1,n_RAS_spaces_virt
-           do l=0,excit_array(n_RAS_spaces_occ+k),+1
-              n_el_temp=RAS_space_occ(i)-j+l
-              if (n_el_temp<=n_spin) then
-                 NRD_spin=NRD_spin+1
-!                 if (i==1)then
+  verbose=2
 
-!                 end if
-                 RAS_el_array_spin(NRD_spin,i)=RAS_space_occ(i)-j
-                 RAS_el_array_spin(NRD_spin,n_RAS_spaces_occ+1)=n_spin-n_el_temp
-                 RAS_el_array_spin(NRD_spin,n_RAS_spaces_occ+k+1)=l
-!                 write(*,*)"***",NRD_spin,i,RAS_space_occ(i)-j,n_spin-n_el_temp,k,l
-              end if
-           end do
-        end do
-     end do
-  end do
-
+  allocate(scratch(10000))
+  
   allocate(counter(n_RAS_spaces_occ+n_RAS_spaces_virt))
   count_possibilities=.true.
-  call  count_el_nums_in_ras_spaces(count_possibilities,fill,counter,occ_RAS_el,virt_RAS_el,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,excit_array)
+  counter(:)=0
+  call  count_el_nums_in_ras_spaces(count_possibilities,fill,counter,scratch(1),scratch(1),MAXVAL(counter),n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,excit_array)
   
-
-!  allocate(occ_RAS_el(n_RAS_spaces_occ,MAXVAL(counter)))
-!  allocate(virt_RAS_el(n_RAS_spaces_virt,MAXVAL(counter)))
-
-!  fill=.true.
-!  call  count_el_nums_in_ras_spaces(count_possibilities,fill,counter,occ_RAS_el,virt_RAS_el,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,excit_array)
-
+  allocate(occ_RAS_el(n_RAS_spaces_occ,MAXVAL(counter)))
+  allocate(virt_RAS_el(n_RAS_spaces_virt,MAXVAL(counter)))
+  write(*,*)"MAXVAL(counter)",MAXVAL(counter)
   
+  fill=.true.
+  call  count_el_nums_in_ras_spaces(count_possibilities,fill,counter,occ_RAS_el,virt_RAS_el,MAXVAL(counter),n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,excit_array)
+
+  NRD_spin=1
+  do i=1,n_RAS_spaces_occ 
+     NRD_spin=NRD_spin*counter(i)
+  end do
+  do k=1,n_RAS_spaces_virt
+     NRD_spin=NRD_spin*counter(n_RAS_spaces_occ+k)
+  end do
+
+  allocate(RAS_dis_temp(NRD_spin,n_RAS_spaces_occ+n_RAS_spaces_virt+1))
+  
+  call fill_distribution_arrays(n_spin,NRD_spin,NRD_good,RAS_dis_temp,RAS_dis,n_RAS_spaces_occ,n_RAS_spaces_virt,occ_RAS_el,virt_RAS_el,counter,verbose)
+
+  deallocate(RAS_dis_temp)
 end subroutine fill_RAS_spaces_per_spin
+  
+subroutine fill_distribution_arrays(n_spin,NRD_spin,NRD_good,RAS_dis_temp,RAS_dis,n_RAS_spaces_occ,n_RAS_spaces_virt,occ_RAS_el,virt_RAS_el,counter,verbose)
+  implicit none
+    integer::n_spin,NRD_spin,NRD_good,n_RAS_spaces_occ,n_RAS_spaces_virt
+    integer::RAS_dis_temp(NRD_spin,n_RAS_spaces_occ+n_RAS_spaces_virt+1),RAS_dis(NRD_spin,n_RAS_spaces_occ+n_RAS_spaces_virt+1)
+    integer::counter(n_RAS_spaces_occ+n_RAS_spaces_virt)
+    integer::occ_RAS_el(n_RAS_spaces_occ,MAXVAL(counter)),virt_RAS_el(n_RAS_spaces_virt,MAXVAL(counter))
+    integer::verbose
 
-subroutine count_el_nums_in_ras_spaces(count_possibilities,fill,counter,occ_RAS_el,virt_RAS_el,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,excit_array)
+    integer:: i,j,k,l,m,n,p,q
+    integer:: n_el_temp,active_el
+    
+    write(*,*)"przed gigantyczna petla"
+    call flush(6)
+    RAS_dis_temp(:,:)=-1000
+    NRD_spin=0
+    do i=1,n_RAS_spaces_occ
+       do j =1,counter(i)
+          do m=1,n_RAS_spaces_occ
+             if ( m .gt. i) then
+                do n =1,counter(m)
+                   do k=1,n_RAS_spaces_virt
+                      do l=1,counter(n_RAS_spaces_occ+k)
+                         do p=1,n_RAS_spaces_virt
+                            if ( p .gt. k) then
+                               do q =1,counter(p)
+                                  NRD_spin=NRD_spin+1
+                                  RAS_dis_temp(NRD_spin,i)=occ_RAS_el(i,j)
+                                  RAS_dis_temp(NRD_spin,m)=occ_RAS_el(m,n)
+                                  RAS_dis_temp(NRD_spin,n_RAS_spaces_occ+k+1)=virt_RAS_el(k,l)
+                                  RAS_dis_temp(NRD_spin,n_RAS_spaces_occ+p+1)=virt_RAS_el(p,q)
+                               end do
+                            end if
+                         end do
+                      end do
+                   end do
+                end do
+             end if
+          end do
+       end do
+    end do
+
+        
+    call flush(6)
+
+    if (verbose .eq. 2) then
+       do i=1,NRD_spin
+          write(*,*)"NRD_spin",i,RAS_dis_temp(i,1),RAS_dis_temp(i,2),RAS_dis_temp(i,4),RAS_dis_temp(i,5)
+       end do
+       call flush(6)
+    end if
+    
+    
+    NRD_good=0
+    do i=1,NRD_spin
+       n_el_temp=0
+       do j=1,n_RAS_spaces_occ
+          n_el_temp=n_el_temp+RAS_dis_temp(i,j)
+          write(*,*)i,"o",j,RAS_dis_temp(i,j)
+       end do
+       do k=1,n_RAS_spaces_virt
+          n_el_temp=n_el_temp+RAS_dis_temp(i,n_RAS_spaces_occ+1+k)
+          write(*,*)i,"v",n_RAS_spaces_occ+1+k,RAS_dis_temp(i,n_RAS_spaces_occ+1+k)
+       end do
+       if ((n_spin-n_el_temp).ge.0) then
+          active_el=n_spin-n_el_temp
+          NRD_good=NRD_good+1
+          RAS_dis_temp(i,n_RAS_spaces_occ+1)=active_el
+          write(*,*)i,"a",active_el
+          do j=1,n_RAS_spaces_occ
+             RAS_dis(NRD_good,j)=RAS_dis_temp(i,j)
+          end do
+          RAS_dis(NRD_good,n_RAS_spaces_occ+1)=RAS_dis_temp(i,n_RAS_spaces_occ+1)
+          do k=1,n_RAS_spaces_virt
+             RAS_dis(NRD_good,n_RAS_spaces_occ+1+k)=RAS_dis_temp(i,n_RAS_spaces_occ+1+k)
+          end do
+          call flush(6)
+          !do j=1,n_RAS_spaces_occ
+          !   RAS_el_array_good(NRD_good,i)=RAS_dis_temp(i,j)
+          !end do
+          !RAS_el_array_good(NRD_good,n_RAS_spaces_occ+1)=active_el
+          !do j=1,n_RAS_spaces_virt
+          !   RAS_el_array_good(NRD_good,n_RAS_spaces_occ+1+j)=RAS_dis_temp(i,n_RAS_spaces_occ+1+j)
+          !end do
+       else
+          write(*,*)i,"NIE",n_spin-n_el_temp
+       end if
+    end do
+    write(*,*)"NRD_spin,NRD_good",NRD_spin,NRD_good
+
+
+    
+    if (verbose .eq. 2) then
+       do i=1,NRD_good
+          write(*,*)"NRD_good",i,RAS_dis(i,1),RAS_dis(i,2),RAS_dis(i,4),RAS_dis(i,5)
+       end do
+       call flush(6)
+    end if
+    
+    
+
+    call flush(6)
+    STOP
+
+    
+  end subroutine fill_distribution_arrays
+  
+  
+
+
+subroutine count_el_nums_in_ras_spaces(count_possibilities,fill,counter,occ_RAS_el,virt_RAS_el,maxcounter,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,excit_array)
   implicit none
   logical, intent(in)::count_possibilities,fill
   integer, intent(in) :: n_RAS_spaces_occ,n_RAS_spaces_virt
   integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ),excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
   integer, intent(inout) :: counter(n_RAS_spaces_occ+n_RAS_spaces_virt)
-  integer, intent(inout)::occ_RAS_el(:,:),virt_RAS_el(:,:)
+  integer, intent(in)::maxcounter
+  integer, intent(inout)::occ_RAS_el(n_RAS_spaces_occ,maxcounter),virt_RAS_el(n_RAS_spaces_virt,maxcounter)
   integer:: i,j,k
 
-  
+
  
   do i=1,n_RAS_spaces_occ   
      k=0
      do j=excit_array(i),0,-1
         if (fill ==.true.) then
+           write(*,*)"Jestem tu",i,k+1
+           call flush(6)           
            occ_RAS_el(i,k+1)=RAS_space_occ(i)-j
            write(*,*)"OCC",i,RAS_space_occ(i)-j
+           call flush(6)
         end if
         k=k+1
      end do
@@ -235,6 +345,7 @@ subroutine count_el_nums_in_ras_spaces(count_possibilities,fill,counter,occ_RAS_
         if (fill ==.true.) then 
            virt_RAS_el(i,k)=j
            write(*,*)"VIRT",n_RAS_spaces_occ+i,j
+           call flush(6)
         end if
         k=k+1
      end do
