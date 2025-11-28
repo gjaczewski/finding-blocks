@@ -70,7 +70,15 @@ program relatvistic_ed
   do i=1, n_RAS_spaces_virt
      NRD_spin_tmp=NRD_spin_tmp*RAS_space_virt(i)
   end do
+  write(*,*)"NRD_spin_tmp",NRD_spin_tmp
+  call flush(6)
 
+  if (relativistic == .true. ) then 
+     NRD_spin_tmp=3*NRD_spin_tmp !since we are considering n_spin, nspin+1, and n_spin-1 for a relativistic case
+       write(*,*)"NRD_spin_tmp",NRD_spin_tmp
+  call flush(6)
+  end if
+  
   n_spaces=n_RAS_spaces_occ+1+n_RAS_spaces_virt !total number of RAS spaces+active space
   allocate(RAS_el_array_alpha(NRD_spin_tmp,n_spaces))
   allocate(RAS_el_array_beta(NRD_spin_tmp,n_spaces))
