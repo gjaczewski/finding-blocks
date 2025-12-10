@@ -11,7 +11,9 @@ program relatvistic_ed
   integer:: max_scratch
   integer, dimension(:), allocatable:: scratch_int
   integer:: max_scratch_int
-  
+
+  integer:: verbose
+  integer:: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2),size_tot(3,2)
   integer:: i,j,k,l
   integer:: count_unique
 
@@ -24,6 +26,7 @@ program relatvistic_ed
   !excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt) - an array describing the excitation level possible in each of the RAS spaces
   !relativistic - logical that is switching between relativistic and nonrelativistic calculations (relativistic = .true. is a relativistic calculation)
 
+  verbose=2
   max_scratch=10000000
   allocate(scratch(max_scratch))
   max_scratch_int=1000000
@@ -86,18 +89,58 @@ program relatvistic_ed
   NRD_spin_alpha=0
   NRD_spin_beta=0
   
-  call fill_RAS_electron_array(relativistic,norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,excit_array,n_alpha,n_beta,NRD_spin_tmp,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta)
+  call fill_RAS_electron_array(relativistic,norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,excit_array,n_alpha,n_beta,NRD_spin_tmp,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
 
-  k=1
-  do i=1,NRD_spin_alpha
-     do j=1,1 !n_RAS_spaces_virt+n_RAS_spaces_virt+1
-        write(*,*)"RAS_el_array_alpha",i,j,RAS_el_array_alpha(i,j)
-        scratch_int(k)=RAS_el_array_alpha(i,j)
-!        write(*,*)"scratch(k)",k,scratch(k)
-        k=k+1
-     end do
-  end do
-  STOP
+
+  Do i=1, NRD_spin_alpha
+     write(*,*)i,RAS_el_array_alpha(i,1),RAS_el_array_alpha(i,2),RAS_el_array_alpha(i,3),RAS_el_array_alpha(i,4),RAS_el_array_alpha(i,5)
+  end Do
+  call flush(6)
+
+
+
+  !size_tot(1:3,1:2) - an array of pointers to the blocks of the vector (or Hamiltonian)
+  !order of blocks: (n_alpha, n_beta); (n_alpha+1, n_beta-1); (n_alpha-1, n_beta+1)
+  !size_tot(1,:) - for sector (n_alpha, n_beta)
+  !size_tot(2,:) - for sector (n_alpha+1, n_beta-1)
+  !size_tot(3,:) - for sector (n_alpha-1, n_beta+1) 
+
+  !size_tot(:,1) - the beginning of such sector
+  !size_tot(:,2) - the size (number of elements) of/in such sector
+
+  
+  WRITE(*,*)"WAZNE,WAZNE, WAZNE, modify the routine below to include logical relativistic"
+  call calculate_space_size(NRD_spin_tmp,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
+
+  allocate(str_a(sizea(1,2),n_alpha))
+
+  call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),verbose))
+
+  
+  allocate(str_b(sizeb(1,2),n_beta))
+
+call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),verbose))
+
+if (relativistic == .true.) then
+     allocate(str_a_p1(sizea(2,2),n_alpha+1))
+
+
+  call fill_spin_strings(n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),verbose))
+
+     allocate(str_a_m1(sizea(3,2),n_alpha-1))
+
+  call fill_spin_strings(n_alpha-11,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),verbose))
+
+     
+     allocate(str_b_p1(sizeb(2,2),n_beta+1))
+call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),verbose))
+
+
+     allocate(str_b_m1(sizeb(3,2),n_beta-1))
+  end if
+  
+  
+  
   !now try to find unique number of electrons in each of the spaces
 
 !  call unique_elements(k-1,scratch_int(1:k-1),scratch_int(k),count_unique)
