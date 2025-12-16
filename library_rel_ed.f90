@@ -554,28 +554,111 @@ subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS
   integer, intent(out)::sizes
   integer, intent(inout)::str_s(sizes,n_s)
   integer, intent(in):: verbose
-
+  integer, allocatable :: options(:,:)
   integer:: siz
+  integer:: orbital_index
   
   write(*,*)"range1,range2",range1,range2
   vec_length=0
+  siz=1
   do i=range1,range2
-     a=n_RAS_spaces_occ+1 
-     siz=1
+     a=n_RAS_spaces_occ+1
+     orbital_index=1  
      do r=1,n_RAS_spaces_occ
-        siz=siz*nCr_dp(RAS_space_occ(r),RAS_el_array_alpha(i,r))
+      siz_space=int(nCr_dp(RAS_space_occ(r),RAS_el_array_spin(i,r)))
+        
+        allocate(options(siz_space,RAS_el_array_spin(i,r)))
+        call truegenerate(RAS_space_occ(r),RAS_el_array_spin(i,r),options)
+        do s=1,siz_space
+           do e=
+           str_s(siz,:)=options(s,:)
+           siz=siz+1 
         !zamiast nCr_dp potrzebujemy call do Twojej routine
         !loopowanie po ciagach 0..1 i uzupelnienie str_s tylko numerami orbitali
            !str_s(siz?,el)=
-     end do
-     do v=1,n_RAS_spaces_virt
-        siz=siz*nCr_dp(RAS_space_virt(v),RAS_el_array_alpha(i,a+v))
+        orbital_index=orbital_index+RAS_space_occ(r)    
      end do
      siz=siz*nCr_dp(active_space,RAS_el_array_alpha(i,a))
      vec_length=vec_length+siz
+     orbital_index=orbital_index+active_space
+     do v=1,n_RAS_spaces_virt
+        siz=siz*nCr_dp(RAS_space_virt(v),RAS_el_array_alpha(i,a+v))
+
+
+
+        orbital_index=orbital_index+RAS_space_virt(v)
+     end do
+     
   end do
   write(*,*)"vec_length",vec_length
   call flush(6)
 contains
 
-  
+subroutine truegenerate(n,k,options)
+    implicit none
+    integer,intent(in) :: n, k
+    integer :: arr(n)
+    integer, intent(inout) :: options(:,:)
+    integer :: index
+
+    ! Example values (you may change these or read from input)
+
+    index = 0
+    
+
+    !options = 0
+    call generate(arr, n, k, 1,options, index)
+end subroutine truegenerate
+
+
+recursive subroutine generate(arr, n, k, pos,options, index)
+        implicit none
+        integer, intent(inout) :: arr(:)
+        integer, intent(in)    :: n, k, pos
+        integer, intent(inout) :: options(:,:)
+        integer, intent(inout) :: index
+        integer :: i,j
+        ! If we filled all positions:
+        if (pos > n) then
+            if (count(arr .ne. 0) == k) then
+                index = index + 1
+                j = 1
+                do i = 1, n
+                    if (arr(i) .ne. 0) then
+                        options(index,j) = arr(i)
+                        j = j+1
+                    end if
+                end do
+            end if
+            return
+        end if
+
+        ! Option 1: place 0 here
+        arr(pos) = 0
+        call generate(arr, n, k, pos + 1,options,index)
+
+        ! Option 2: place orbital number here
+        arr(pos) = pos
+    
+        call generate(arr, n, k, pos + 1,options,index)
+
+end subroutine generate
+
+subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_2,n_el_2,string_array_combined)
+   implicit none
+   integer, intent(in) string_array1(nstr_1,n_el_1),string_array2(nstr_1,nstr_2)
+   integer, intent(in) nstr_1,n_el_1,nstr_2,n_el_2
+   integer, intent(out) string_array_combined(nstr_1*nstr_2,n_el_1+n_el_2)
+   integer :: i,j
+   integer :: n_s
+   n_s = 0
+   do i = 1,nstr_1
+      do j = 1,nstr_2
+         n_s = n_s + 1
+         !string_array_combined(n_s,:) = [string_array1(nstr_1,:),string_array2(nstr_2,:)] do sprawdzenia
+         string_array_combined(n_s,1:n_el_1) = string_array1(i,1:n_el_1)
+         string_array_combined(n_s,n_el_1+1:n_el_1+n_el_2) = string_array2(j,1:n_el_2)
+      end do
+   end do
+end subroutine string_direct_product
+
