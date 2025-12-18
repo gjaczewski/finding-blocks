@@ -16,7 +16,7 @@ program relatvistic_ed
   integer:: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2),size_tot(3,2)
   integer:: i,j,k,l
   integer:: count_unique
-
+  integer, dimension(:,:), allocatable :: str_a, str_b, str_a_p1, str_a_m1, str_b_p1, str_b_m1
 
   !norb - total number of orbitals
   ! the principles for the occupied and virtual RAS spaces are the same
@@ -76,7 +76,7 @@ program relatvistic_ed
   write(*,*)"NRD_spin_tmp",NRD_spin_tmp
   call flush(6)
 
-  if (relativistic == .true. ) then 
+  if (relativistic .eqv. .true. ) then 
      NRD_spin_tmp=3*NRD_spin_tmp !since we are considering n_spin, nspin+1, and n_spin-1 for a relativistic case
        write(*,*)"NRD_spin_tmp",NRD_spin_tmp
   call flush(6)
@@ -121,7 +121,7 @@ program relatvistic_ed
 
 call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),verbose))
 
-if (relativistic == .true.) then
+if (relativistic .eqv. .true.) then
      allocate(str_a_p1(sizea(2,2),n_alpha+1))
 
 
@@ -129,7 +129,7 @@ if (relativistic == .true.) then
 
      allocate(str_a_m1(sizea(3,2),n_alpha-1))
 
-  call fill_spin_strings(n_alpha-11,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),verbose))
+  call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),verbose))
 
      
      allocate(str_b_p1(sizeb(2,2),n_beta+1))

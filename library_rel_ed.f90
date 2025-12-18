@@ -134,7 +134,7 @@ subroutine fill_RAS_electron_array(relativistic,norb,n_RAS_spaces_occ,RAS_space_
   call fill_RAS_spaces_per_spin(n_alpha,NRD_spin_alpha,NRD_spin_tmp,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,excit_array,RAS_el_array_alpha)
   NRDa(1,2)=NRD_spin_alpha
   
-  if (relativistic == .true.) then
+  if (relativistic .eqv. .true.) then
      
      ! for alpha+1 electrons
      if (n_alpha+1 .le.norb) then
@@ -165,7 +165,7 @@ subroutine fill_RAS_electron_array(relativistic,norb,n_RAS_spaces_occ,RAS_space_
   call fill_RAS_spaces_per_spin(n_beta,NRD_spin_beta,NRD_spin_tmp,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,excit_array,RAS_el_array_beta)
   NRDb(1,2)=NRD_spin_beta
 
-  if (relativistic == .true.) then
+  if (relativistic .eqv. .true.) then
 
     
      ! for beta+1 electrons
@@ -390,11 +390,11 @@ subroutine count_el_nums_in_ras_spaces(count_possibilities,fill,counter,occ_RAS_
      k=0
      do j=excit_array(i),0,-1
         k=k+1
-        if (fill ==.true.) then
+        if (fill .eqv. .true.) then
            occ_RAS_el(i,k+1)=RAS_space_occ(i)-j
         end if
      end do
-     if (count_possibilities == .true.) then
+     if (count_possibilities .eqv. .true.) then
         counter(i)=k
      end if
   end do
@@ -404,14 +404,14 @@ subroutine count_el_nums_in_ras_spaces(count_possibilities,fill,counter,occ_RAS_
      k=0
      do j=0,excit_array(n_RAS_spaces_occ+i),+1
         k=k+1
-        if (fill ==.true.) then 
+        if (fill .eqv. .true.) then 
            virt_RAS_el(i,k)=j
            write(*,*)"VIRT",n_RAS_spaces_occ+i,j
            write(*,*)"IK",i,k,virt_RAS_el(i,k)
            call flush(6)
         end if
      end do
-     if (count_possibilities == .true.) then
+     if (count_possibilities .eqv. .true.) then
         counter(n_RAS_spaces_occ+i)=k
      end if
   end do
@@ -562,6 +562,8 @@ subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS
   integer :: n_el_temp
   integer :: n_str_temp
   integer :: counter
+  integer :: a, i , r ,v
+  real(8) :: nCr_dp
   counter = 1
 
 allocate(str_temp(1,2))
@@ -573,14 +575,18 @@ allocate(str_temp(1,2))
      deallocate(str_temp)
      !wyodrebniono r=1 occupied RAS
      siz_space=int(nCr_dp(RAS_space_occ(1),RAS_el_array_spin(i,1)))
+     deallocate(options)
+     allocate(options(siz_space,RAS_el_array_spin(i,1)))
      call truegenerate(RAS_space_occ(1),RAS_el_array_spin(i,1),options,orbital_index)
      str_temp = options
-     allocate(str_temp(int(nCr_dp(RAS_space_occ(1),RAS_el_array_spin(i,1))),RAS_el_array_spin(i,1),RAS_el_array_spin(i,1)))
+     allocate(str_temp(int(nCr_dp(RAS_space_occ(1),RAS_el_array_spin(i,1))),RAS_el_array_spin(i,1)))
      n_el_temp = n_el_temp + RAS_el_array_spin(i,1)
      n_str_temp = n_str_temp*siz_space
      orbital_index=orbital_index+RAS_space_occ(1) 
      do r=2,n_RAS_spaces_occ
       siz_space=int(nCr_dp(RAS_space_occ(r),RAS_el_array_spin(i,r)))
+      deallocate(options)
+      allocate(options(siz_space,RAS_el_array_spin(i,r)))
 
       call truegenerate(RAS_space_occ(r),RAS_el_array_spin(i,r),options,orbital_index)
       call string_direct_product(str_temp,n_str_temp,n_el_temp,options,siz_space,RAS_el_array_spin(i,r))
@@ -591,6 +597,8 @@ allocate(str_temp(1,2))
       orbital_index=orbital_index+RAS_space_occ(r)    
      end do
       siz_space = int(nCr_dp(active_space,RAS_el_array_spin(i,a)))
+           deallocate(options)
+     allocate(options(siz_space,RAS_el_array_spin(i,a)))
       call truegenerate(active_space,RAS_el_array_spin(i,a),options,orbital_index)
       call string_direct_product(str_temp,n_str_temp,n_el_temp,options,siz_space,RAS_el_array_spin(i,a))
     
@@ -602,6 +610,8 @@ allocate(str_temp(1,2))
      do v=1,n_RAS_spaces_virt
      
         siz_space = int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v)))
+             deallocate(options)
+     allocate(options(siz_space,RAS_el_array_spin(i,a+v)))
         call truegenerate(RAS_space_virt(v),RAS_el_array_spin(i,a+v),options,orbital_index)
         call string_direct_product(str_temp,n_str_temp,n_el_temp,options,siz_space,RAS_el_array_spin(i,a+v))
     
@@ -615,9 +625,8 @@ allocate(str_temp(1,2))
      str_s(counter:n_str_temp+counter-1,:)=str_temp
      counter = counter + n_str_temp
   end do
+end subroutine fill_spin_strings
 
-
-contains
 
 subroutine truegenerate(n,k,options,orbital_index)
     implicit none
@@ -626,12 +635,11 @@ subroutine truegenerate(n,k,options,orbital_index)
     integer,allocatable, intent(inout) :: options(:,:)
     integer :: index
     integer, intent(in) :: orbital_index
-
+     real(8) :: nCr_dp
     ! Example values (you may change these or read from input)
 
     index = 0
-    deallocate(options)
-    allocate(options(int(nCr_dp(n,k)),k))
+
 
     !options = 0
     call generate(arr, n, k, 1,options, index)
@@ -641,11 +649,12 @@ end subroutine truegenerate
 
 recursive subroutine generate(arr, n, k, pos,options, index)
         implicit none
-        integer, intent(inout) :: arr(:)
+        integer, intent(inout) :: arr(n)
         integer, intent(in)    :: n, k, pos
         integer, intent(inout) :: options(:,:)
         integer, intent(inout) :: index
         integer :: i,j
+        
         ! If we filled all positions:
         if (pos > n) then
             if (count(arr .ne. 0) == k) then
@@ -674,10 +683,10 @@ end subroutine generate
 
 subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_2,n_el_2)
    implicit none
-   integer,allocatable, intent(inout) string_array1(nstr_1,n_el_1)
-   integer, intent(in) string_array2(nstr_1,nstr_2)
-   integer, intent(in) nstr_1,n_el_1,nstr_2,n_el_2
-   integer, allocatable string_array_combined(:,:)
+   integer, allocatable ,intent(inout) ::string_array1(nstr_1,n_el_1)
+   integer, intent(in):: string_array2(nstr_1,nstr_2)
+   integer, intent(in) ::nstr_1,n_el_1,nstr_2,n_el_2
+   integer, allocatable:: string_array_combined(:,:)
    integer :: i,j
    integer :: n_s
    n_s = 0
