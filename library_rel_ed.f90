@@ -554,105 +554,112 @@ subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS
   integer, intent(in)::sizes
   integer, intent(inout)::str_s(sizes,n_s)
   integer, intent(in):: verbose
-  integer, allocatable :: options(:,:)
+  integer :: space_sizes(n_RAS_spaces_occ+1+n_RAS_spaces_virt)
   integer, allocatable :: str_temp(:,:)
-
-  integer :: siz_space
-  integer:: orbital_index
+  integer, allocatable :: another_str_temp(:,:)
+  integer :: siz_space, tot_siz_space
   integer :: n_el_temp
-  integer :: n_str_temp
-  integer :: counter
+  integer:: orbital_index
+  integer :: n_str_temp(n_RAS_spaces_occ+1+n_RAS_spaces_virt)
+  integer :: j
   integer :: a, i , r ,v
   real(8) :: nCr_dp
-  counter = 1
-
-allocate(str_temp(1,2))
+  
+  a=n_RAS_spaces_occ+1
+  tot_siz_space = 0
   do i=range1,range2
-     a=n_RAS_spaces_occ+1
-     orbital_index=1
+      siz_space = 1
+     orbital_index = 1
+     j = 1
      n_el_temp = 0
-     n_str_temp = 1
-     deallocate(str_temp)
-     !wyodrebniono r=1 occupied RAS
-     siz_space=int(nCr_dp(RAS_space_occ(1),RAS_el_array_spin(i,1)))
-     deallocate(options)
-     allocate(options(siz_space,RAS_el_array_spin(i,1)))
-     call truegenerate(RAS_space_occ(1),RAS_el_array_spin(i,1),options,orbital_index)
-     str_temp = options
-     allocate(str_temp(int(nCr_dp(RAS_space_occ(1),RAS_el_array_spin(i,1))),RAS_el_array_spin(i,1)))
-     n_el_temp = n_el_temp + RAS_el_array_spin(i,1)
-     n_str_temp = n_str_temp*siz_space
-     orbital_index=orbital_index+RAS_space_occ(1) 
-     do r=2,n_RAS_spaces_occ
-      siz_space=int(nCr_dp(RAS_space_occ(r),RAS_el_array_spin(i,r)))
-      deallocate(options)
-      allocate(options(siz_space,RAS_el_array_spin(i,r)))
+   
+   do r=1,n_RAS_spaces_occ
+      space_sizes(j) = int(nCr_dp(RAS_space_occ(r),RAS_el_array_spin(i,r)))
+      siz_space=siz_space*space_sizes(j)
+      n_str_temp(j) = siz_space
+      j = j + 1
 
-      call truegenerate(RAS_space_occ(r),RAS_el_array_spin(i,r),options,orbital_index)
-      call string_direct_product(str_temp,n_str_temp,n_el_temp,options,siz_space,RAS_el_array_spin(i,r))
-      
+   end do
+
+   space_sizes(j) = int(nCr_dp(active_space,RAS_el_array_spin(i,a)))
+   siz_space=siz_space*space_sizes(j)
+   n_str_temp(j) = siz_space
+   j = j + 1
+   do v=1,n_RAS_spaces_virt
+   space_sizes(j) = int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v)))
+   siz_space=siz_space*space_sizes(j)
+   n_str_temp(j) = siz_space
+   j = j + 1
+   end do
+
+   allocate(str_temp(siz_space,n_s))
+   allocate(another_str_temp(siz_space,n_s))
+
+   j = 0
+   do r=1,n_RAS_spaces_occ
+      call truegenerate(RAS_space_occ(r),RAS_el_array_spin(i,r),str_temp(1:space_sizes(r),1+n_el_temp:RAS_el_array_spin(i,r)+n_el_temp),orbital_index,space_sizes(r),RAS_el_array_spin(i,r))
+
+      if (r .gt. 1) then
+         call string_direct_product(str_temp(1:space_sizes(r),1+n_el_temp:RAS_el_array_spin(i,r)+n_el_temp),space_sizes(r),RAS_el_array_spin(i,r),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp + RAS_el_array_spin(i,r)))
+         str_temp = another_str_temp   
+      end if 
       n_el_temp = n_el_temp + RAS_el_array_spin(i,r)
-      n_str_temp = n_str_temp*siz_space
-      
-      orbital_index=orbital_index+RAS_space_occ(r)    
-     end do
-      siz_space = int(nCr_dp(active_space,RAS_el_array_spin(i,a)))
-           deallocate(options)
-     allocate(options(siz_space,RAS_el_array_spin(i,a)))
-      call truegenerate(active_space,RAS_el_array_spin(i,a),options,orbital_index)
-      call string_direct_product(str_temp,n_str_temp,n_el_temp,options,siz_space,RAS_el_array_spin(i,a))
-    
+      j = j + 1
+      orbital_index=orbital_index+RAS_space_occ(r)
+   end do
+      call truegenerate(active_space,RAS_el_array_spin(i,a),str_temp(1:space_sizes(a),1+n_el_temp:RAS_el_array_spin(i,a)+n_el_temp),orbital_index,space_sizes(a),RAS_el_array_spin(i,a))
+      call string_direct_product(str_temp(1:space_sizes(a),1+n_el_temp:RAS_el_array_spin(i,a)+n_el_temp),space_sizes(a),RAS_el_array_spin(i,a),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp+RAS_el_array_spin(i,a)))
+      str_temp = another_str_temp
       n_el_temp = n_el_temp + RAS_el_array_spin(i,a)
-      n_str_temp = n_str_temp*siz_space
-      
-
       orbital_index=orbital_index+active_space
-     do v=1,n_RAS_spaces_virt
-     
-        siz_space = int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v)))
-             deallocate(options)
-     allocate(options(siz_space,RAS_el_array_spin(i,a+v)))
-        call truegenerate(RAS_space_virt(v),RAS_el_array_spin(i,a+v),options,orbital_index)
-        call string_direct_product(str_temp,n_str_temp,n_el_temp,options,siz_space,RAS_el_array_spin(i,a+v))
-    
-        n_el_temp = n_el_temp + RAS_el_array_spin(i,a+v)
-        n_str_temp = n_str_temp*siz_space
+      j = j + 1
+   do v=1,n_RAS_spaces_virt
+      call truegenerate(RAS_space_virt(v),RAS_el_array_spin(i,a+v),str_temp(1:space_sizes(a+v),1+n_el_temp:RAS_el_array_spin(i,a+v)+n_el_temp),orbital_index,space_sizes(a+v),RAS_el_array_spin(i,a+v))
+      call string_direct_product(str_temp(1:space_sizes(a+v),1+n_el_temp:RAS_el_array_spin(i,a+v)+n_el_temp),space_sizes(a+v),RAS_el_array_spin(i,a+v),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp + RAS_el_array_spin(i,a+v)))
+      str_temp = another_str_temp
+      n_el_temp = n_el_temp + RAS_el_array_spin(i,a+v)
+      orbital_index=orbital_index+RAS_space_virt(v)
+      j = j + 1
+   end do
+   str_s(tot_siz_space+1:tot_siz_space+siz_space,:) = str_temp
+   tot_siz_space = tot_siz_space + siz_space
+   deallocate(str_temp)
+   deallocate(another_str_temp)
+
+   end do
 
 
-        orbital_index=orbital_index+RAS_space_virt(v)
-     end do
-     
-     str_s(counter:n_str_temp+counter-1,:)=str_temp
-     counter = counter + n_str_temp
-  end do
+
+   
+
 end subroutine fill_spin_strings
 
 
-subroutine truegenerate(n,k,options,orbital_index)
+subroutine truegenerate(n,k,options,orbital_index,s1,s2)
     implicit none
     integer,intent(in) :: n, k
     integer :: arr(n)
-    integer,allocatable, intent(inout) :: options(:,:)
+    integer, intent(inout) :: options(s1,s2)
     integer :: index
     integer, intent(in) :: orbital_index
-     real(8) :: nCr_dp
+    integer, intent(in) :: s1,s2
+   
     ! Example values (you may change these or read from input)
 
     index = 0
 
 
     !options = 0
-    call generate(arr, n, k, 1,options, index)
+    call generate(arr, n, k, 1,options,index,s1,s2)
     options = options + orbital_index - 1
-end subroutine truegenerate
-
-
-recursive subroutine generate(arr, n, k, pos,options, index)
+contains
+recursive subroutine generate(arr, n, k, pos,options, index,s1,s2)
         implicit none
         integer, intent(inout) :: arr(n)
         integer, intent(in)    :: n, k, pos
-        integer, intent(inout) :: options(:,:)
+        integer, intent(inout) :: options(s1,s2)
         integer, intent(inout) :: index
+        integer, intent(in) :: s1,s2
         integer :: i,j
         
         ! If we filled all positions:
@@ -672,35 +679,38 @@ recursive subroutine generate(arr, n, k, pos,options, index)
 
         ! Option 1: place 0 here
         arr(pos) = 0
-        call generate(arr, n, k, pos + 1,options,index)
+        call generate(arr, n, k, pos + 1,options,index,s1,s2)
 
         ! Option 2: place orbital number here
         arr(pos) = pos
     
-        call generate(arr, n, k, pos + 1,options,index)
+        call generate(arr, n, k, pos + 1,options,index,s1,s2)
 
 end subroutine generate
+end subroutine truegenerate
 
-subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_2,n_el_2)
+
+
+
+subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_2,n_el_2,string_array_combined)
    implicit none
-   integer, allocatable ,intent(inout) ::string_array1(nstr_1,n_el_1)
+   integer, intent(in) ::string_array1(nstr_1,n_el_1)
    integer, intent(in):: string_array2(nstr_1,nstr_2)
    integer, intent(in) ::nstr_1,n_el_1,nstr_2,n_el_2
-   integer, allocatable:: string_array_combined(:,:)
+   integer, intent(inout):: string_array_combined(nstr_1*nstr_2,n_el_1+n_el_2)
+
    integer :: i,j
    integer :: n_s
    n_s = 0
-   allocate(string_array_combined(nstr_1*nstr_2,n_el_1+n_el_2))
-   do i = 1,nstr_1
-      do j = 1,nstr_2
+   !allocate(string_array_combined(nstr_1*nstr_2,n_el_1+n_el_2))
+   do j = 1,nstr_2
+      do i = 1,nstr_1
          n_s = n_s + 1
          !string_array_combined(n_s,:) = [string_array1(nstr_1,:),string_array2(nstr_2,:)] do sprawdzenia
-         string_array_combined(n_s,1:n_el_1) = string_array1(i,1:n_el_1)
-         string_array_combined(n_s,n_el_1+1:n_el_1+n_el_2) = string_array2(j,1:n_el_2)
+         string_array_combined(n_s,1:n_el_2) = string_array2(j,1:n_el_2)
+         string_array_combined(n_s,n_el_2+1:n_el_1+n_el_2) = string_array1(i,1:n_el_1)
       end do
    end do
-   deallocate(string_array1)
-   allocate(string_array1(nstr_1*nstr_2,n_el_1+n_el_2))
-   string_array1 = string_array_combined
+
 end subroutine string_direct_product
 
