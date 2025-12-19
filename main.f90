@@ -113,9 +113,12 @@ program relatvistic_ed
   call calculate_space_size(NRD_spin_tmp,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
 
   allocate(str_a(sizea(1,2),n_alpha))
-
+      write(*,*) "tutaj",RAS_el_array_alpha(61,:),NRD_spin_alpha,n_RAS_spaces_occ+n_RAS_spaces_virt+1
+call flush(6)
   call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a,verbose)
+write(*,*) "koniec"
 
+stop
                                   
   allocate(str_b(sizeb(1,2),n_beta))
 

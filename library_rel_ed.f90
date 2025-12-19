@@ -215,7 +215,7 @@ subroutine fill_RAS_spaces_per_spin(n_spin,NRD_good,NRD_spin_tmp,n_RAS_spaces_oc
   integer:: n_el_temp,active_el,NRD_spin
   integer:: i,j,k,l,m,n,p,q
   logical:: count_possibilities,fill
-  double precision, dimension(:), allocatable::scratch
+  integer, dimension(:), allocatable::scratch
   !NRD_spin - number of possible electron distributions for a given alpha or beta spin
   verbose=0
 
@@ -499,27 +499,26 @@ subroutine calc_size_block(range1,range2,NRD_spin_tmp,NRD_spin_alpha,NRD_spin_be
 
   integer:: i,r,v,a
   integer:: siz
-  
+  real(8) :: nCr_dp
   write(*,*)"range1,range2",range1,range2
   vec_length=0
   do i=range1,range2
      a=n_RAS_spaces_occ+1 
      siz=1
      do r=1,n_RAS_spaces_occ
-        siz=siz*nCr_dp(RAS_space_occ(r),RAS_el_array_alpha(i,r))
+        siz=siz*int(nCr_dp(RAS_space_occ(r),RAS_el_array_alpha(i,r)))
      end do
      do v=1,n_RAS_spaces_virt
-        siz=siz*nCr_dp(RAS_space_virt(v),RAS_el_array_alpha(i,a+v))
+        siz=siz*int(nCr_dp(RAS_space_virt(v),RAS_el_array_alpha(i,a+v)))
      end do
-     siz=siz*nCr_dp(active_space,RAS_el_array_alpha(i,a))
+     siz=siz*int(nCr_dp(active_space,RAS_el_array_alpha(i,a)))
      vec_length=vec_length+siz
   end do
   write(*,*)"vec_length",vec_length
   call flush(6)
-contains
+end subroutine calc_size_block
 
-
-  function nCr_dp(n, r) result(c)
+function nCr_dp(n, r) result(c)
     implicit none
     integer, intent(in) :: n, r
     real(8) :: c
@@ -539,7 +538,7 @@ contains
   end function nCr_dp
 
   
-end subroutine calc_size_block
+
 
 
 
@@ -564,7 +563,9 @@ subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS
   integer :: j
   integer :: a, i , r ,v
   real(8) :: nCr_dp
-  
+      write(*,*) "tutaj",RAS_el_array_spin(61,:),NRD_spin,n_RAS_spaces_occ+n_RAS_spaces_virt+1
+call flush(6)
+stop
   a=n_RAS_spaces_occ+1
   tot_siz_space = 0
   do i=range1,range2
@@ -572,7 +573,7 @@ subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS
      orbital_index = 1
      j = 1
      n_el_temp = 0
-   
+
    do r=1,n_RAS_spaces_occ
       space_sizes(j) = int(nCr_dp(RAS_space_occ(r),RAS_el_array_spin(i,r)))
       siz_space=siz_space*space_sizes(j)
@@ -587,6 +588,12 @@ subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS
    j = j + 1
    do v=1,n_RAS_spaces_virt
    space_sizes(j) = int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v)))
+   if (i .eq. 61) then
+   write(*,*) v,int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v))),RAS_space_virt(v),RAS_el_array_spin(i,a+v),nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v))
+   write(*,*) "tuuuu",RAS_el_array_spin(61,:)
+call flush(6)
+stop
+   end if
    siz_space=siz_space*space_sizes(j)
    n_str_temp(j) = siz_space
    j = j + 1
@@ -601,15 +608,18 @@ subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS
 
       if (r .gt. 1) then
          call string_direct_product(str_temp(1:space_sizes(r),1+n_el_temp:RAS_el_array_spin(i,r)+n_el_temp),space_sizes(r),RAS_el_array_spin(i,r),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp + RAS_el_array_spin(i,r)))
-         str_temp = another_str_temp   
+         str_temp = another_str_temp  
+
       end if 
       n_el_temp = n_el_temp + RAS_el_array_spin(i,r)
       j = j + 1
       orbital_index=orbital_index+RAS_space_occ(r)
+
    end do
       call truegenerate(active_space,RAS_el_array_spin(i,a),str_temp(1:space_sizes(a),1+n_el_temp:RAS_el_array_spin(i,a)+n_el_temp),orbital_index,space_sizes(a),RAS_el_array_spin(i,a))
       call string_direct_product(str_temp(1:space_sizes(a),1+n_el_temp:RAS_el_array_spin(i,a)+n_el_temp),space_sizes(a),RAS_el_array_spin(i,a),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp+RAS_el_array_spin(i,a)))
       str_temp = another_str_temp
+
       n_el_temp = n_el_temp + RAS_el_array_spin(i,a)
       orbital_index=orbital_index+active_space
       j = j + 1
@@ -617,16 +627,28 @@ subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS
       call truegenerate(RAS_space_virt(v),RAS_el_array_spin(i,a+v),str_temp(1:space_sizes(a+v),1+n_el_temp:RAS_el_array_spin(i,a+v)+n_el_temp),orbital_index,space_sizes(a+v),RAS_el_array_spin(i,a+v))
       call string_direct_product(str_temp(1:space_sizes(a+v),1+n_el_temp:RAS_el_array_spin(i,a+v)+n_el_temp),space_sizes(a+v),RAS_el_array_spin(i,a+v),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp + RAS_el_array_spin(i,a+v)))
       str_temp = another_str_temp
+      
       n_el_temp = n_el_temp + RAS_el_array_spin(i,a+v)
       orbital_index=orbital_index+RAS_space_virt(v)
       j = j + 1
    end do
-   str_s(tot_siz_space+1:tot_siz_space+siz_space,:) = str_temp
-   tot_siz_space = tot_siz_space + siz_space
-   deallocate(str_temp)
-   deallocate(another_str_temp)
 
+   str_s(tot_siz_space+1:tot_siz_space+siz_space,:) = str_temp
+
+   tot_siz_space = tot_siz_space + siz_space
+
+   deallocate(str_temp)
+   
+   deallocate(another_str_temp)
+   if (i .eq. 61) then
+   write(*,*) "i", space_sizes
+   call flush(6)
+   stop
+   end if
    end do
+write(*,*) "koniec2"
+call flush(6)
+stop 
 
 
 
