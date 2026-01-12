@@ -283,7 +283,6 @@ end if
 
 end subroutine find_spin_distributions
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
 subroutine calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
@@ -396,8 +395,9 @@ function nCr_dp(n, r) result(c)
         c = c * dble(n - k + i) / dble(i)
     end do
   end function nCr_dp
-
+!!!!!!!!!!!!!!
   subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s,verbose)
+  
   implicit none
   integer, intent(in):: n_s
   integer, intent(in):: n_RAS_spaces_occ,n_RAS_spaces_virt,active_space
@@ -413,7 +413,7 @@ function nCr_dp(n, r) result(c)
   integer, allocatable :: another_str_temp(:,:)
   integer :: siz_space, tot_siz_space
   integer :: n_el_temp
-  integer:: orbital_index
+  integer :: orbital_index
   integer :: n_str_temp(n_RAS_spaces_occ+1+n_RAS_spaces_virt)
   integer :: j
   integer :: a, i , r ,v
@@ -456,33 +456,46 @@ function nCr_dp(n, r) result(c)
 
       if (r .gt. 1) then
          call string_direct_product(str_temp(1:space_sizes(r),1+n_el_temp:RAS_el_array_spin(i,r)+n_el_temp),space_sizes(r),RAS_el_array_spin(i,r),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp + RAS_el_array_spin(i,r)))
-         str_temp = another_str_temp  
+         str_temp = another_str_temp 
 
+         
       end if 
+
       n_el_temp = n_el_temp + RAS_el_array_spin(i,r)
       j = j + 1
       orbital_index=orbital_index+RAS_space_occ(r)
 
    end do
+
+
+
       call truegenerate(active_space,RAS_el_array_spin(i,a),str_temp(1:space_sizes(a),1+n_el_temp:RAS_el_array_spin(i,a)+n_el_temp),orbital_index,space_sizes(a),RAS_el_array_spin(i,a))
+
       call string_direct_product(str_temp(1:space_sizes(a),1+n_el_temp:RAS_el_array_spin(i,a)+n_el_temp),space_sizes(a),RAS_el_array_spin(i,a),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp+RAS_el_array_spin(i,a)))
       str_temp = another_str_temp
 
       n_el_temp = n_el_temp + RAS_el_array_spin(i,a)
       orbital_index=orbital_index+active_space
       j = j + 1
+
+
+
    do v=1,n_RAS_spaces_virt
       call truegenerate(RAS_space_virt(v),RAS_el_array_spin(i,a+v),str_temp(1:space_sizes(a+v),1+n_el_temp:RAS_el_array_spin(i,a+v)+n_el_temp),orbital_index,space_sizes(a+v),RAS_el_array_spin(i,a+v))
+
+      
       call string_direct_product(str_temp(1:space_sizes(a+v),1+n_el_temp:RAS_el_array_spin(i,a+v)+n_el_temp),space_sizes(a+v),RAS_el_array_spin(i,a+v),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp + RAS_el_array_spin(i,a+v)))
+      
       str_temp = another_str_temp
       
       n_el_temp = n_el_temp + RAS_el_array_spin(i,a+v)
       orbital_index=orbital_index+RAS_space_virt(v)
+
       j = j + 1
    end do
 
    str_s(tot_siz_space+1:tot_siz_space+siz_space,:) = str_temp
-
+ 
    tot_siz_space = tot_siz_space + siz_space
 
    deallocate(str_temp)
@@ -558,7 +571,7 @@ end subroutine truegenerate
 subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_2,n_el_2,string_array_combined)
    implicit none
    integer, intent(in) ::string_array1(nstr_1,n_el_1)
-   integer, intent(in):: string_array2(nstr_1,nstr_2)
+   integer, intent(in):: string_array2(nstr_2,n_el_2)
    integer, intent(in) ::nstr_1,n_el_1,nstr_2,n_el_2
    integer, intent(inout):: string_array_combined(nstr_1*nstr_2,n_el_1+n_el_2)
 

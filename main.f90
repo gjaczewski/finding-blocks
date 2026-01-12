@@ -83,14 +83,36 @@ call count_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RA
 allocate(RAS_el_array_alpha(NRD_spin_alpha,n_spaces))
 allocate(RAS_el_array_beta(NRD_spin_beta,n_spaces))
 
+write(*,*) "NRD_spin_alpha: ",NRD_spin_alpha
+write(*,*) "NRD_spin_beta: ",NRD_spin_beta
+call flush(6)
+
 
 ! here we fill RAS_el_array_spin tables and calculate NRDa, NRDb
 call find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
 
+do i=1,NRD_spin_alpha
+write(*,*)i, RAS_el_array_alpha(i,:)
+call flush(6)
+end do
+write(*,*) "NRDa:"
+write(*,*) NRDa(1,:)
+write(*,*) NRDa(2,:)
+write(*,*) NRDa(3,:)
 
-
+write(*,*) "NRDb: "
+write(*,*) NRDa(1,:)
+write(*,*) NRDa(2,:)
+write(*,*) NRDa(3,:)
 ! here we calculate sizea(3,2),sizeb(3,2),size_tot(3,2) 
   call calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
+write(*,*) "Space size alpha: ", sizea(1,2), sizea(2,2), sizea(3,2)
+write(*,*) "Space size beta: ", sizeb(1,2), sizeb(2,2), sizeb(3,2)
+write(*,*) "Total size:"
+write(*,*) size_tot(1,:)
+write(*,*) size_tot(2,:)
+write(*,*) size_tot(3,:)
+call flush(6)
 
   !size_tot(1:3,1:2) - an array of pointers to the blocks of the vector (or Hamiltonian)
   !order of blocks: (n_alpha, n_beta); (n_alpha+1, n_beta-1); (n_alpha-1, n_beta+1)
@@ -105,7 +127,12 @@ call find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS
   ! here we generate strings (alpha and beta separately)
   allocate(str_a(sizea(1,2),n_alpha))
   call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a,verbose)
-  
+do i=1,sizea(1,2)
+write(*,*) str_a(i,:)
+call flush(6)
+
+end do
+
   allocate(str_b(sizeb(1,2),n_beta))
   call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b,verbose)
 
@@ -124,7 +151,6 @@ if (relativistic .eqv. .true.) then
      allocate(str_b_m1(sizeb(3,2),n_beta-1))
      call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),str_b_m1,verbose)
   end if
-
 
 write(*,*) "KONIEC"
 call flush(6)
