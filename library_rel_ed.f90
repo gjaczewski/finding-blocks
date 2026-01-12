@@ -302,10 +302,10 @@ subroutine calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,
   ! n_alpha n_beta block
   sizea(1,1)=1
 
-  call calc_size_block(NRDa(1,1),NRDa(1,2),NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizea(1,2))
+  call calc_size_block(NRDa(1,1),NRDa(1,2),NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizea(1,2))
   
   sizeb(1,1)=1 
-  call calc_size_block(NRDb(1,1),NRDb(1,2),NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizeb(1,2))
+  call calc_size_block(NRDb(1,1),NRDb(1,2),NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizeb(1,2))
 
   size_tot(1,1)=1
   size_tot(1,2)=sizea(1,2)*sizeb(1,2)
@@ -314,10 +314,10 @@ subroutine calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,
   
   ! n_alpha+1 n_beta-1 block
   sizea(2,1)=1 
-  call calc_size_block(NRDa(2,1),NRDa(2,2),NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizea(2,2))
+  call calc_size_block(NRDa(2,1),NRDa(2,2),NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizea(2,2))
 
   sizeb(3,1)=1 
-  call calc_size_block(NRDb(3,1),NRDb(3,2),NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizeb(3,2))
+  call calc_size_block(NRDb(3,1),NRDb(3,2),NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizeb(3,2))
   
   size_tot(2,1)=size_tot(1,2)+1
   size_tot(2,2)=sizea(2,2)*sizeb(3,2)
@@ -325,10 +325,10 @@ subroutine calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,
 
   ! n_alpha-1 n_beta+1 block
   sizea(3,1)=1 
-  call calc_size_block(NRDa(3,1),NRDa(3,2),NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizea(3,2))
+  call calc_size_block(NRDa(3,1),NRDa(3,2),NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizea(3,2))
 
   sizeb(2,1)=1 
-  call calc_size_block(NRDb(2,1),NRDb(2,2),NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizeb(2,2))
+  call calc_size_block(NRDb(2,1),NRDb(2,2),NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizeb(2,2))
   
   size_tot(3,1)=size_tot(2,1)+sizea(2,2)*sizeb(3,2)  
   size_tot(3,2)=sizea(3,2)*sizeb(2,2)
@@ -346,33 +346,33 @@ end subroutine calculate_space_size
 
 
 
-subroutine calc_size_block(range1,range2,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,vec_length)
+subroutine calc_size_block(range1,range2,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,vec_length)
   implicit none
   integer, intent(in):: range1,range2
   integer, intent(in):: n_RAS_spaces_occ,n_RAS_spaces_virt,active_space
   integer, intent(in):: RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt)
-  integer, intent(in):: NRD_spin_alpha,NRD_spin_beta
-  integer, intent(in):: RAS_el_array_alpha(NRD_spin_alpha,n_RAS_spaces_occ+n_RAS_spaces_virt+1),RAS_el_array_beta(NRD_spin_beta,n_RAS_spaces_occ+n_RAS_spaces_virt+1)
+  integer, intent(in):: NRD_spin
+  integer, intent(in):: RAS_el_array_spin(NRD_spin,n_RAS_spaces_occ+n_RAS_spaces_virt+1)
   integer, intent(out)::vec_length
 
   integer:: i,r,v,a
   integer:: siz
   real(8) :: nCr_dp
-  write(*,*)"range1,range2",range1,range2
+  !write(*,*)"range1,range2",range1,range2
   vec_length=0
   do i=range1,range2
      a=n_RAS_spaces_occ+1 
      siz=1
      do r=1,n_RAS_spaces_occ
-        siz=siz*int(nCr_dp(RAS_space_occ(r),RAS_el_array_alpha(i,r)))
+        siz=siz*int(nCr_dp(RAS_space_occ(r),RAS_el_array_spin(i,r)))
      end do
      do v=1,n_RAS_spaces_virt
-        siz=siz*int(nCr_dp(RAS_space_virt(v),RAS_el_array_alpha(i,a+v)))
+        siz=siz*int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v)))
      end do
-     siz=siz*int(nCr_dp(active_space,RAS_el_array_alpha(i,a)))
+     siz=siz*int(nCr_dp(active_space,RAS_el_array_spin(i,a)))
      vec_length=vec_length+siz
   end do
-  write(*,*)"vec_length",vec_length
+  !write(*,*)"vec_length",vec_length
   call flush(6)
 end subroutine calc_size_block
 

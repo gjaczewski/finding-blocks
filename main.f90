@@ -50,12 +50,12 @@ program new_rel
   do i=1, n_RAS_spaces_virt
      NRD_spin_tmp=NRD_spin_tmp*RAS_space_virt(i)
   end do
-  write(*,*)"NRD_spin_tmp",NRD_spin_tmp
+  !write(*,*)"NRD_spin_tmp",NRD_spin_tmp
   call flush(6)
 
   if (relativistic .eqv. .true. ) then 
      NRD_spin_tmp=3*NRD_spin_tmp !since we are considering n_spin, nspin+1, and n_spin-1 for a relativistic case
-       write(*,*)"NRD_spin_tmp",NRD_spin_tmp
+  !     write(*,*)"NRD_spin_tmp",NRD_spin_tmp
   call flush(6)
   end if
 
@@ -76,7 +76,7 @@ do i=1,n_combinations
 end do
 
 
-
+! here we calculate number of possible distributions NRD_spin_alpha, NRD_spin_beta and number of distribution for fixed spin
 call count_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta)
 
 
@@ -84,8 +84,13 @@ allocate(RAS_el_array_alpha(NRD_spin_alpha,n_spaces))
 allocate(RAS_el_array_beta(NRD_spin_beta,n_spaces))
 
 
-
+! here we fill RAS_el_array_spin tables and calculate NRDa, NRDb
 call find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
+
+
+
+! here we calculate sizea(3,2),sizeb(3,2),size_tot(3,2) 
+  call calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
 
   !size_tot(1:3,1:2) - an array of pointers to the blocks of the vector (or Hamiltonian)
   !order of blocks: (n_alpha, n_beta); (n_alpha+1, n_beta-1); (n_alpha-1, n_beta+1)
@@ -96,8 +101,8 @@ call find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS
   !size_tot(:,1) - the beginning of such sector
   !size_tot(:,2) - the size (number of elements) of/in such sector
 
-  call calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
 
+  ! here we generate strings (alpha and beta separately)
   allocate(str_a(sizea(1,2),n_alpha))
   call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a,verbose)
   
@@ -121,7 +126,8 @@ if (relativistic .eqv. .true.) then
   end if
 
 
-
+write(*,*) "KONIEC"
+call flush(6)
 end program new_rel
 
 
