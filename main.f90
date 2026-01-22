@@ -1,4 +1,5 @@
 program new_rel
+
   implicit none
   integer:: n_alpha,n_beta,norb
   integer:: n_RAS_spaces_occ,n_RAS_spaces_virt,active_space, n_spaces
@@ -7,33 +8,39 @@ program new_rel
   logical:: relativistic
   integer ::   NRD_spin_tmp, NRD_spin_alpha, NRD_spin_beta
   integer :: i, j, temp, n_distributions_alpha,n_distributions_beta, n_distributions_alpha_p1,n_distributions_beta_p1, n_distributions_alpha_m1,n_distributions_beta_m1
-  integer, allocatable :: distributions(:,:)
   integer :: max,n_combinations
   integer, allocatable :: all_combinations(:,:)
   integer:: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2),size_tot(3,2)
   integer, dimension(:,:), allocatable :: str_a, str_b, str_a_p1, str_a_m1, str_b_p1, str_b_m1
+  integer, allocatable :: alpha_annihilation_matrix(:,:,:), alpha_annihilation_matrix_p1(:,:,:), beta_annihilation_matrix(:,:,:), beta_annihilation_matrix_p1(:,:,:)
+  integer, allocatable :: alpha_creation_matrix(:,:,:), alpha_creation_matrix_m1(:,:,:), beta_creation_matrix(:,:,:), beta_creation_matrix_m1(:,:,:)
   integer :: verbose
+  integer :: n_rows_alpha, n_rows_beta
+  complex, allocatable :: nr_hamiltonian_alpha(:,:), nr_hamiltonian_beta(:,:)
+  complex, allocatable :: hopping(:,:), interaction(:,:,:,:)
   !********* INPUT **********
   verbose = 3
   relativistic=.true.
-  norb=14
+  norb=10
 
-  n_alpha=6
-  n_beta=6
+  n_alpha=1
+  n_beta=1
   
   n_RAS_spaces_occ=2
   n_RAS_spaces_virt=2
 
   allocate(RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt))
+! number of orbitals cannot be equal 0
 
-  RAS_space_occ(1)=3
+  RAS_space_occ(1)=2
   RAS_space_occ(2)=2
-  active_space=4
-  RAS_space_virt(1)=3
+  active_space=2
+  RAS_space_virt(1)=2
   RAS_space_virt(2)=2
 
+  
   !***********************
-
+  
   allocate(excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt))
   excit_array(:)=2
 
@@ -91,10 +98,6 @@ call flush(6)
 ! here we fill RAS_el_array_spin tables and calculate NRDa, NRDb
 call find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
 
-do i=1,NRD_spin_alpha
-write(*,*)i, RAS_el_array_alpha(i,:)
-call flush(6)
-end do
 write(*,*) "NRDa:"
 write(*,*) NRDa(1,:)
 write(*,*) NRDa(2,:)
@@ -104,6 +107,7 @@ write(*,*) "NRDb: "
 write(*,*) NRDa(1,:)
 write(*,*) NRDa(2,:)
 write(*,*) NRDa(3,:)
+
 ! here we calculate sizea(3,2),sizeb(3,2),size_tot(3,2) 
   call calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
 write(*,*) "Space size alpha: ", sizea(1,2), sizea(2,2), sizea(3,2)
@@ -127,30 +131,90 @@ call flush(6)
   ! here we generate strings (alpha and beta separately)
   allocate(str_a(sizea(1,2),n_alpha))
   call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a,verbose)
-do i=1,sizea(1,2)
-write(*,*) str_a(i,:)
-call flush(6)
 
-end do
 
   allocate(str_b(sizeb(1,2),n_beta))
   call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b,verbose)
+  
+  if (n_alpha .gt. 1) then
+  allocate(str_a_m1(sizea(3,2),n_alpha-1))
+  call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),str_a_m1,verbose)
+  else
+  allocate(str_a_m1(sizea(3,2),1))
+  str_a_m1(sizea(3,2),:) = 0
+  end if
 
-if (relativistic .eqv. .true.) then
+  if (n_beta .gt. 1) then
+  allocate(str_b_m1(sizeb(3,2),n_beta-1))
+  call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),str_b_m1,verbose)
+  else
+  allocate(str_b_m1(sizeb(3,2),1))
+  str_b_m1(sizeb(3,2),:) = 0
+  end if
+  
+  if (relativistic .eqv. .true.) then
      allocate(str_a_p1(sizea(2,2),n_alpha+1))
      call fill_spin_strings(n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),str_a_p1,verbose)
 
-     allocate(str_a_m1(sizea(3,2),n_alpha-1))
-     call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),str_a_m1,verbose)
-
-     
      allocate(str_b_p1(sizeb(2,2),n_beta+1))
      call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b_p1,verbose)
-
-
-     allocate(str_b_m1(sizeb(3,2),n_beta-1))
-     call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),str_b_m1,verbose)
   end if
+
+
+
+!here we generate how annihilation operator acts on states
+allocate(alpha_annihilation_matrix(norb,sizea(1,2),2))
+allocate(beta_annihilation_matrix(norb,sizeb(1,2),2))
+
+call fill_annihilation_results(sizea(3,2),sizea(1,2),n_alpha,str_a_m1,str_a,norb,alpha_annihilation_matrix)
+call fill_annihilation_results(sizeb(3,2),sizeb(1,2),n_beta,str_b_m1,str_b,norb,beta_annihilation_matrix)
+
+if (relativistic .eqv. .true.) then
+allocate(alpha_annihilation_matrix_p1(norb,sizea(2,2),2))
+allocate(beta_annihilation_matrix_p1(norb,sizeb(2,2),2))
+call fill_annihilation_results(sizea(1,2),sizea(2,2),n_alpha+1,str_a,str_a_p1,norb,alpha_annihilation_matrix_p1)
+call fill_annihilation_results(sizeb(1,2),sizeb(2,2),n_beta+1,str_b,str_b_p1,norb,beta_annihilation_matrix_p1)
+end if
+
+
+
+!here we generate how creation operator acts on states
+!!!!!!!!!!!!!  TBD: need to take into account orbital capacity i.e. what happens when n_spin == norb
+allocate(alpha_creation_matrix_m1(norb,sizea(3,2),2))
+allocate(beta_creation_matrix_m1(norb,sizeb(3,2),2))
+
+call fill_creation_results(sizea(1,2),sizea(3,2),n_alpha-1,str_a,str_a_m1,norb,alpha_creation_matrix_m1)
+call fill_creation_results(sizeb(1,2),sizeb(3,2),n_beta-1,str_b,str_b_m1,norb,beta_creation_matrix_m1)
+
+if(relativistic .eqv. .true.) then
+allocate(alpha_creation_matrix(norb,sizea(1,2),2))
+allocate(beta_creation_matrix(norb,sizeb(1,2),2))
+call fill_creation_results(sizea(2,2),sizea(1,2),n_alpha,str_a_p1,str_a,norb,alpha_creation_matrix)
+call fill_creation_results(sizeb(2,2),sizeb(1,2),n_beta,str_b_p1,str_b,norb,beta_creation_matrix)
+end if
+
+
+
+
+!here we start to generate matrix elements of the hamiltonian
+
+n_rows_alpha = 1
+n_rows_beta = 1
+
+allocate(hopping(norb,norb))
+allocate(interaction(norb,norb,norb,norb))
+hopping(:,:) = 1
+interaction(:,:,:,:) = 1
+
+allocate(nr_hamiltonian_alpha(n_rows_alpha,sizea(1,2)))
+allocate(nr_hamiltonian_beta(n_rows_beta,sizeb(1,2)))
+
+call fill_non_rel_one_body_part(n_rows_alpha,n_alpha,sizea(1,2),str_a,norb,hopping,nr_hamiltonian_alpha)
+call fill_non_rel_one_body_part(n_rows_beta,n_beta,sizeb(1,2),str_b,norb,hopping,nr_hamiltonian_beta)
+
+call fill_two_body_spin_part(nr_hamiltonian_alpha,n_rows_alpha,n_alpha,sizea(1,2),str_a,sizea(3,2),str_a_m1,interaction,norb,alpha_annihilation_matrix,alpha_creation_matrix_m1)
+call fill_two_body_spin_part(nr_hamiltonian_beta,n_rows_beta,n_beta,sizeb(1,2),str_b,sizeb(3,2),str_b_m1,interaction,norb,beta_annihilation_matrix,beta_creation_matrix_m1)
+
 
 write(*,*) "KONIEC"
 call flush(6)

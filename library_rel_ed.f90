@@ -76,24 +76,19 @@ subroutine check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,
      call flush(6)
      STOP
   end if
-
 end subroutine check_orbital_space_declarations
-
-
 
 
 subroutine count_distributions(n_s, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions)
 implicit none
 integer, intent(in) :: n_s, n_RAS_spaces_occ,n_RAS_spaces_virt, active_space
 integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt), excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
-integer ::i,j, temp
+integer ::i,j
 integer, intent(in) :: n_combinations,n_spaces
 integer, intent(in) :: all_combinations(n_combinations,n_spaces)
 integer :: a,v,r, counter, sum, checker
 integer, intent(out) :: n_distributions
 a = n_RAS_spaces_occ + 1
-
-
 counter = 0
 do i=1,n_combinations
    sum = 0
@@ -129,19 +124,8 @@ do i=1,n_combinations
 
    end if
 end do
-
-
 n_distributions = counter
-
-
 end subroutine count_distributions
-
-
-
-
-
-
-
 
 
 subroutine find_distributions(n_s, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions,distributions)
@@ -187,10 +171,8 @@ do i=1,n_combinations
 
    end if
 end do
-
-
-
 end subroutine find_distributions
+
 
 subroutine count_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta)
 implicit none
@@ -206,9 +188,6 @@ integer, intent(out) :: NRD_spin_alpha,NRD_spin_beta
 
 call count_distributions(n_alpha, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha)
 call count_distributions(n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta)
-
-if (relativistic .eqv. .true.) then
-  
   if (n_alpha .le. 0) then
     n_distributions_alpha_m1 = 0
 
@@ -222,12 +201,13 @@ if (relativistic .eqv. .true.) then
     call count_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1)
 
   end if
+if (relativistic .eqv. .true.) then
+  
+
       call count_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1)
       call count_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1)
       
 else 
-    n_distributions_alpha_m1 = 0
-    n_distributions_beta_m1 = 0
     n_distributions_alpha_p1 = 0    
     n_distributions_beta_p1 = 0
 end if 
@@ -235,8 +215,8 @@ end if
 
 NRD_spin_alpha = n_distributions_alpha + n_distributions_alpha_m1 + n_distributions_alpha_p1
 NRD_spin_beta= n_distributions_beta + n_distributions_beta_m1 + n_distributions_beta_p1
-
 end subroutine count_spin_distributions
+
 
 subroutine find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
 implicit none
@@ -270,19 +250,18 @@ NRDb(3,1) = n_distributions_beta + n_distributions_beta_p1 + 1
 NRDb(3,2) = n_distributions_beta + n_distributions_beta_p1 + n_distributions_beta_m1
 call find_distributions(n_alpha, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,RAS_el_array_alpha(1:n_distributions_alpha,:))
 call find_distributions(n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta,RAS_el_array_beta(1:n_distributions_beta,:))
-if (relativistic .eqv. .true.) then
-call find_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1,RAS_el_array_alpha(n_distributions_alpha+1:n_distributions_alpha+n_distributions_alpha_p1,:))
-call find_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1,RAS_el_array_beta(n_distributions_beta+1:n_distributions_beta+n_distributions_beta_p1,:))
 if (n_alpha .gt. 0) then
 call find_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1,RAS_el_array_alpha(n_distributions_alpha+n_distributions_alpha_p1+1:n_distributions_alpha_m1+n_distributions_alpha+n_distributions_alpha_p1,:))
 end if
 if (n_beta .gt. 0) then
 call find_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1,RAS_el_array_beta(n_distributions_beta+n_distributions_beta_p1+1:n_distributions_beta_m1+n_distributions_beta+n_distributions_beta_p1,:))
 end if
+if (relativistic .eqv. .true.) then
+call find_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1,RAS_el_array_alpha(n_distributions_alpha+1:n_distributions_alpha+n_distributions_alpha_p1,:))
+call find_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1,RAS_el_array_beta(n_distributions_beta+1:n_distributions_beta+n_distributions_beta_p1,:))
 end if
 
 end subroutine find_spin_distributions
-
 
 
 subroutine calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
@@ -295,7 +274,7 @@ subroutine calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,
   integer, intent(out)::sizea(3,2),sizeb(3,2),size_tot(3,2) 
   integer, intent(in):: verbose
   
-  integer:: i,r,v,a
+
   integer:: vector_length
   
   ! n_alpha n_beta block
@@ -344,7 +323,6 @@ subroutine calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,
 end subroutine calculate_space_size
 
 
-
 subroutine calc_size_block(range1,range2,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,vec_length)
   implicit none
   integer, intent(in):: range1,range2
@@ -375,7 +353,6 @@ subroutine calc_size_block(range1,range2,NRD_spin,RAS_el_array_spin,n_RAS_spaces
   call flush(6)
 end subroutine calc_size_block
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 function nCr_dp(n, r) result(c)
     implicit none
@@ -395,7 +372,8 @@ function nCr_dp(n, r) result(c)
         c = c * dble(n - k + i) / dble(i)
     end do
   end function nCr_dp
-!!!!!!!!!!!!!!
+
+
   subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s,verbose)
   
   implicit none
@@ -439,6 +417,7 @@ function nCr_dp(n, r) result(c)
    siz_space=siz_space*space_sizes(j)
    n_str_temp(j) = siz_space
    j = j + 1
+
    do v=1,n_RAS_spaces_virt
    space_sizes(j) = int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v)))
 
@@ -471,8 +450,12 @@ function nCr_dp(n, r) result(c)
 
       call truegenerate(active_space,RAS_el_array_spin(i,a),str_temp(1:space_sizes(a),1+n_el_temp:RAS_el_array_spin(i,a)+n_el_temp),orbital_index,space_sizes(a),RAS_el_array_spin(i,a))
 
+      if (n_RAS_spaces_occ .ne. 0) then
       call string_direct_product(str_temp(1:space_sizes(a),1+n_el_temp:RAS_el_array_spin(i,a)+n_el_temp),space_sizes(a),RAS_el_array_spin(i,a),str_temp(1:n_str_temp(j),1:n_el_temp),n_str_temp(j),n_el_temp,another_str_temp(1:n_str_temp(j+1),1:n_el_temp+RAS_el_array_spin(i,a)))
       str_temp = another_str_temp
+
+      end if
+
 
       n_el_temp = n_el_temp + RAS_el_array_spin(i,a)
       orbital_index=orbital_index+active_space
@@ -503,11 +486,6 @@ function nCr_dp(n, r) result(c)
    deallocate(another_str_temp)
 
    end do
-
-
-
-   
-
 end subroutine fill_spin_strings
 
 
@@ -566,8 +544,6 @@ end subroutine generate
 end subroutine truegenerate
 
 
-
-
 subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_2,n_el_2,string_array_combined)
    implicit none
    integer, intent(in) ::string_array1(nstr_1,n_el_1)
@@ -587,5 +563,281 @@ subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_
          string_array_combined(n_s,n_el_2+1:n_el_1+n_el_2) = string_array1(i,1:n_el_1)
       end do
    end do
-
 end subroutine string_direct_product
+
+
+subroutine ISEQUAL(vector1,vector2,length,indicator)
+implicit none
+    integer, intent(in) :: length
+    logical, intent(inout) :: indicator
+    integer, intent(in) :: vector1(length), vector2(length)
+    integer :: i
+    integer :: temp(length)
+    indicator = .true.
+    do i=1,length
+        temp(i) = vector1(i) - vector2(i)
+        if (temp(i) .ne. 0) then 
+         indicator = .false.
+         exit
+        end if
+    end do
+end subroutine ISEQUAL
+
+
+subroutine sort(a, n)
+    implicit none
+    integer, intent(in)    :: n
+    integer, intent(inout) :: a(n)
+    integer :: i, j, temp
+
+    do i = 1, n-1
+        do j = 1, n-i
+            if (a(j) > a(j+1)) then
+                temp   = a(j)
+                a(j)   = a(j+1)
+                a(j+1) = temp
+            end if
+        end do
+    end do
+end subroutine sort
+
+
+subroutine find_number(strings_alpha,strings_beta,string_alpha,string_beta,n_strings_alpha,n_strings_beta,n_alpha,n_beta,string_number)
+implicit none
+integer, intent(in) :: n_strings_alpha,n_strings_beta,n_alpha,n_beta
+integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+integer, intent(in) :: string_alpha(n_alpha), string_beta(n_beta)
+integer, intent(inout) :: string_number
+integer :: i, j, k
+logical :: indicator
+do i=1,n_strings_alpha
+   call ISEQUAL(string_alpha,strings_alpha(i,:),n_alpha,indicator)
+   if (indicator .eqv. .true.) then
+      j = i
+      exit
+   end if
+end do
+
+do i=1,n_strings_beta
+   call ISEQUAL(string_beta,strings_beta(i,:),n_beta,indicator)
+   if (indicator .eqv. .true.) then
+      k = i
+      exit
+   end if
+end do
+string_number = (j-1)*n_strings_beta+k
+end subroutine find_number
+
+
+subroutine creation(orbital,string_spin,n_spin,new_string_spin,sign)
+implicit none
+integer, intent(in) :: orbital,n_spin
+integer, intent(in) :: string_spin(n_spin)
+integer, intent(out) :: new_string_spin(n_spin+1)
+integer, intent(out) :: sign
+integer :: i,j
+logical :: check
+check = .true.
+do i=1,n_spin
+   if (string_spin(i) .eq. orbital) then
+      check = .false.
+      exit
+   end if 
+end do
+if (check .eqv. .true.) then
+   do i=1,n_spin
+   new_string_spin(i+1) = string_spin(i)
+   end do
+   new_string_spin(1) = orbital
+   call sort(new_string_spin,n_spin+1)
+   do j=1,n_spin+1
+      if (new_string_spin(j) .eq. orbital) then
+      sign = (-1)**(j-1)
+      exit
+      end if
+   end do
+else
+   sign = 1
+   new_string_spin(:) = 0
+end if
+end subroutine creation
+
+
+subroutine annihilation(orbital,string_spin,n_spin,new_string_spin,sign)
+implicit none
+integer, intent(in) :: orbital,n_spin
+integer, intent(in) :: string_spin(n_spin)
+integer, intent(out) :: new_string_spin(n_spin-1)
+integer, intent(out) :: sign
+integer :: i,j,k
+logical :: check
+check = .false.
+k = 1
+do i=1,n_spin
+   if (string_spin(i) .eq. orbital) then
+      check = .true.
+      exit
+   end if 
+end do
+if (check .eqv. .true.) then
+   do i=1,n_spin
+   if (string_spin(i) .ne. orbital ) then
+   new_string_spin(k) = string_spin(i)
+   k = k + 1
+   end if
+   end do
+   do j=1,n_spin
+      if (string_spin(j) .eq. orbital) then
+      sign = (-1)**(j-1)
+      exit
+      end if
+   end do
+else
+   sign = 1
+   new_string_spin(:) = 0
+end if
+end subroutine annihilation
+
+
+subroutine fill_annihilation_results(n_spin_strings_m1,n_spin_strings,n_spin,spin_strings_m1,spin_strings,norb,spin_annihilation_matrix)
+implicit none
+integer, intent(in) :: n_spin_strings_m1,n_spin_strings,n_spin,norb
+integer, intent(in) :: spin_strings_m1(n_spin_strings_m1,n_spin-1), spin_strings(n_spin_strings,n_spin)
+integer, intent(out) :: spin_annihilation_matrix(norb,n_spin_strings,2)
+integer :: temp_string(n_spin-1)
+integer :: sign, i, j, k
+logical :: indicator
+spin_annihilation_matrix(:,:,1) = 0
+spin_annihilation_matrix(:,:,2) = 1
+if (n_spin .gt. 1) then
+do i=1,n_spin_strings
+   do j=1,n_spin
+      call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string,sign)
+      do k=1,n_spin_strings_m1
+         call ISEQUAL(temp_string,spin_strings_m1(k,:),n_spin-1,indicator)
+         if (indicator .eqv. .true.) then
+            spin_annihilation_matrix(spin_strings(i,j),i,1) = k
+            spin_annihilation_matrix(spin_strings(i,j),i,2) = sign
+            exit
+         end if
+      end do
+   end do
+end do
+else
+do i=1,n_spin_strings
+   spin_annihilation_matrix(spin_strings(i,1),i,1) = 1
+end do
+end if
+end subroutine fill_annihilation_results
+
+
+subroutine fill_creation_results(n_spin_strings_p1,n_spin_strings,n_spin,spin_strings_p1,spin_strings,norb,spin_creation_matrix)
+implicit none 
+integer, intent(in) :: n_spin_strings_p1,n_spin_strings,n_spin,norb
+integer, intent(in) :: spin_strings_p1(n_spin_strings_p1,n_spin+1), spin_strings(n_spin_strings,n_spin)
+integer, intent(out) :: spin_creation_matrix(norb,n_spin_strings,2)
+integer :: temp_string(n_spin+1)
+integer :: sign, i, j, k
+logical :: indicator
+spin_creation_matrix(:,:,1) = 0
+spin_creation_matrix(:,:,2) = 1
+do i=1,n_spin_strings
+   do j=1,n_spin
+      call creation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string,sign)
+      do k=1,n_spin_strings_p1
+         call ISEQUAL(temp_string,spin_strings_p1(k,:),n_spin+1,indicator)
+         if (indicator .eqv. .true.) then
+            spin_creation_matrix(spin_strings(i,j),i,1) = k
+            spin_creation_matrix(spin_strings(i,j),i,2) = sign
+            exit
+         end if
+      end do
+   end do
+end do
+end subroutine fill_creation_results
+
+
+subroutine fill_non_rel_one_body_part(n_rows,n_spin,n_spin_strings,spin_strings,norb,hopping,non_rel_hamiltonian)
+implicit none
+integer, intent(in) :: n_rows, n_spin, n_spin_strings, norb
+integer, intent(in) :: spin_strings(n_spin_strings,n_spin)
+complex, intent(in) :: hopping(norb,norb)
+complex, intent(inout) :: non_rel_hamiltonian(n_rows,n_spin_strings)
+integer :: i,j,k,l
+integer :: temp_string1(n_spin-1), temp_string2(n_spin-1)
+integer :: sign1,sign2
+logical :: indicator
+!possible to include condition for nonzero hopping amplitudes
+!do poprawienia z uzyciem malych macierzy
+do i=1,n_rows
+   do j=1,n_spin
+      call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string1,sign1)
+      do k=1,n_spin_strings
+         do l=1,n_spin
+            call annihilation(spin_strings(k,l),spin_strings(k,:),n_spin,temp_string2,sign2)
+            call ISEQUAL(temp_string1,temp_string2,n_spin-1,indicator)
+            if (indicator .eqv. .true.) then
+               non_rel_hamiltonian(i,k) = non_rel_hamiltonian(i,k)+sign1*sign2*hopping(spin_strings(i,j),spin_strings(k,l))
+               exit
+            end if
+         end do
+      end do
+   end do
+end do
+end subroutine fill_non_rel_one_body_part
+
+
+subroutine fill_two_body_spin_part(two_body_spin_matrix,n_rows,n_spin,n_spin_strings,spin_strings,n_spin_strings_m1,spin_strings_m1,interaction,norb,spin_annihilation_matrix,spin_creation_matrix_m1)
+integer, intent(in) :: n_rows,n_spin,n_spin_strings,n_spin_strings_m1,norb
+integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_strings_m1(n_spin_strings_m1,n_spin-1), spin_annihilation_matrix(norb,n_spin_strings,2), spin_creation_matrix_m1(norb,n_spin_strings_m1,2)
+complex, intent(in) :: interaction(norb,norb,norb,norb)
+complex, intent(inout) :: two_body_spin_matrix(n_rows,n_spin_strings)
+integer :: temp_state1,temp_state2, temp_sign1,temp_sign2, temp_state3,temp_state4,temp_sign3,temp_sign4
+integer :: a,b,i,j,k,l
+logical :: indicator
+if (n_spin .gt. 1) then
+   do b=1,n_spin_strings
+      do k=1,n_spin
+         temp_state1 = spin_annihilation_matrix(spin_strings(b,k),b,1)
+         temp_sign1 = spin_annihilation_matrix(spin_strings(b,k),b,2)
+         do i=1,norb
+         temp_state2 = spin_creation_matrix_m1(i,temp_state1,1)
+         temp_sign2 = spin_creation_matrix_m1(i,temp_state1,2)*temp_sign1
+               do a=1,n_rows
+                  call ISEQUAL(spin_strings(a,:),spin_strings(temp_state2,:),n_spin,indicator)
+                  if (indicator .eqv. .true.) then
+                  do j=1,norb
+                     two_body_spin_matrix(a,b) = two_body_spin_matrix(a,b) + 0.5*interaction(i,j,spin_strings(b,k),j)*temp_sign2
+                  end do
+                  end if
+               end do
+         end do
+      end do
+   end do
+
+   do b=1,n_spin_strings
+      do k=1,n_spin
+         temp_state1 = spin_annihilation_matrix(spin_strings(b,k),b,1)
+         temp_sign1 = spin_annihilation_matrix(spin_strings(b,k),b,2)
+         do j=1,norb
+         temp_state2 = spin_creation_matrix_m1(j,temp_state1,1)
+         temp_sign2 = spin_creation_matrix_m1(j,temp_state1,2)*temp_sign1
+            do l=1,n_spin
+            temp_state3 = spin_annihilation_matrix(spin_strings(temp_state2,l),temp_state2,1)
+            temp_sign3 = spin_annihilation_matrix(spin_strings(temp_state2,l),temp_state2,2)*temp_sign2
+               do i=1,norb
+                  temp_state4 = spin_creation_matrix_m1(i,temp_state3,1)
+                  temp_sign4 = spin_creation_matrix_m1(i,temp_state3,2)*temp_sign3
+                  do a=1,n_spin_strings
+                     call ISEQUAL(spin_strings(a,:),spin_strings(temp_state4,:),n_spin,indicator)
+                     if (indicator .eqv. .true.) then
+                        two_body_spin_matrix(a,b) = two_body_spin_matrix(a,b) - 0.5*interaction(i,j,spin_strings(b,k),spin_strings(temp_state2,l))
+                     end if
+                  end do
+               end do
+            end do
+         end do
+      end do
+   end do
+end if
+end subroutine fill_two_body_spin_part
