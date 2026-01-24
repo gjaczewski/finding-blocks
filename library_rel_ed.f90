@@ -742,13 +742,13 @@ logical :: indicator
 spin_creation_matrix(:,:,1) = 0
 spin_creation_matrix(:,:,2) = 1
 do i=1,n_spin_strings
-   do j=1,n_spin
-      call creation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string,sign)
+   do j=1,norb
+      call creation(j,spin_strings(i,:),n_spin,temp_string,sign)
       do k=1,n_spin_strings_p1
          call ISEQUAL(temp_string,spin_strings_p1(k,:),n_spin+1,indicator)
          if (indicator .eqv. .true.) then
-            spin_creation_matrix(spin_strings(i,j),i,1) = k
-            spin_creation_matrix(spin_strings(i,j),i,2) = sign
+            spin_creation_matrix(j,i,1) = k
+            spin_creation_matrix(j,i,2) = sign
             exit
          end if
       end do
@@ -784,10 +784,12 @@ do i=1,n_rows
       end do
    end do
 end do
+
 end subroutine fill_non_rel_one_body_part
 
 
 subroutine fill_two_body_spin_part(two_body_spin_matrix,n_rows,n_spin,n_spin_strings,spin_strings,n_spin_strings_m1,spin_strings_m1,interaction,norb,spin_annihilation_matrix,spin_creation_matrix_m1)
+implicit none
 integer, intent(in) :: n_rows,n_spin,n_spin_strings,n_spin_strings_m1,norb
 integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_strings_m1(n_spin_strings_m1,n_spin-1), spin_annihilation_matrix(norb,n_spin_strings,2), spin_creation_matrix_m1(norb,n_spin_strings_m1,2)
 complex, intent(in) :: interaction(norb,norb,norb,norb)
@@ -803,6 +805,7 @@ if (n_spin .gt. 1) then
          do i=1,norb
          temp_state2 = spin_creation_matrix_m1(i,temp_state1,1)
          temp_sign2 = spin_creation_matrix_m1(i,temp_state1,2)*temp_sign1
+               if (temp_state2 .ne. 0) then
                do a=1,n_rows
                   call ISEQUAL(spin_strings(a,:),spin_strings(temp_state2,:),n_spin,indicator)
                   if (indicator .eqv. .true.) then
@@ -811,9 +814,11 @@ if (n_spin .gt. 1) then
                   end do
                   end if
                end do
-         end do
+            end if
+            end do
       end do
    end do
+!TO BE OPTIMISED
 
    do b=1,n_spin_strings
       do k=1,n_spin
@@ -822,22 +827,35 @@ if (n_spin .gt. 1) then
          do j=1,norb
          temp_state2 = spin_creation_matrix_m1(j,temp_state1,1)
          temp_sign2 = spin_creation_matrix_m1(j,temp_state1,2)*temp_sign1
+         if (temp_state2 .ne. 0) then
             do l=1,n_spin
             temp_state3 = spin_annihilation_matrix(spin_strings(temp_state2,l),temp_state2,1)
             temp_sign3 = spin_annihilation_matrix(spin_strings(temp_state2,l),temp_state2,2)*temp_sign2
                do i=1,norb
                   temp_state4 = spin_creation_matrix_m1(i,temp_state3,1)
                   temp_sign4 = spin_creation_matrix_m1(i,temp_state3,2)*temp_sign3
-                  do a=1,n_spin_strings
+                  if (temp_state4 .ne. 0) then
+                  do a=1,n_rows
                      call ISEQUAL(spin_strings(a,:),spin_strings(temp_state4,:),n_spin,indicator)
                      if (indicator .eqv. .true.) then
                         two_body_spin_matrix(a,b) = two_body_spin_matrix(a,b) - 0.5*interaction(i,j,spin_strings(b,k),spin_strings(temp_state2,l))
                      end if
                   end do
+               end if
                end do
             end do
+         end if
          end do
       end do
    end do
 end if
 end subroutine fill_two_body_spin_part
+
+
+subroutine fill_two_body_mixed_part(two_body_mixed_matrix,n_rows_alpha,n_rows_beta,n_alpha,n_beta,n_strings_alpha,n_strings_beta,strings_alpha,strings_beta,n_strings_alpha_m1,n_strings_beta_m1,strings_alpha_m1,strings_beta_m1,interaction,norb,alpha_annihilation_matrix,alpha_creation_matrix_m1,beta_annihilation_matrix,beta_creation_matrix_m1)
+implicit none
+integer, intent(in) :: n_rows_alpha,n_rows_beta,n_alpha,n_beta,n_strings_alpha,n_strings_beta,n_strings_alpha_m1,n_strings_beta_m1,norb
+integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta), strings_alpha_m1(n_strings_alpha_m1,n_alpha-1), strings_beta_m1(n_strings_beta_m1,n_beta-1),alpha_annihilation_matrix(norb,n_strings_alpha,2), alpha_creation_matrix_m1(norb,n_strings_alpha_m1,2), beta_annihilation_matrix(norb,n_strings_beta,2), beta_creation_matrix_m1(norb,n_strings_beta_m1,2)
+complex, intent(in) :: interaction(norb,norb,norb,norb)
+complex, intent(out) :: two_body_mixed_matrix(n_rows_alpha*n_rows_beta,n_strings_alpha*n_strings_beta)
+end subroutine fill_two_body_mixed_part

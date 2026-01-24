@@ -23,8 +23,8 @@ program new_rel
   relativistic=.true.
   norb=10
 
-  n_alpha=1
-  n_beta=1
+  n_alpha=5
+  n_beta=5
   
   n_RAS_spaces_occ=2
   n_RAS_spaces_virt=2
@@ -127,7 +127,6 @@ call flush(6)
   !size_tot(:,1) - the beginning of such sector
   !size_tot(:,2) - the size (number of elements) of/in such sector
 
-
   ! here we generate strings (alpha and beta separately)
   allocate(str_a(sizea(1,2),n_alpha))
   call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a,verbose)
@@ -141,7 +140,7 @@ call flush(6)
   call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),str_a_m1,verbose)
   else
   allocate(str_a_m1(sizea(3,2),1))
-  str_a_m1(sizea(3,2),:) = 0
+  str_a_m1(sizea(3,2),:) = 0 !vacuum
   end if
 
   if (n_beta .gt. 1) then
@@ -149,7 +148,7 @@ call flush(6)
   call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),str_b_m1,verbose)
   else
   allocate(str_b_m1(sizeb(3,2),1))
-  str_b_m1(sizeb(3,2),:) = 0
+  str_b_m1(sizeb(3,2),:) = 0 !vacuum
   end if
   
   if (relativistic .eqv. .true.) then
@@ -159,7 +158,6 @@ call flush(6)
      allocate(str_b_p1(sizeb(2,2),n_beta+1))
      call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b_p1,verbose)
   end if
-
 
 
 !here we generate how annihilation operator acts on states
@@ -179,12 +177,12 @@ end if
 
 
 !here we generate how creation operator acts on states
-!!!!!!!!!!!!!  TBD: need to take into account orbital capacity i.e. what happens when n_spin == norb
 allocate(alpha_creation_matrix_m1(norb,sizea(3,2),2))
 allocate(beta_creation_matrix_m1(norb,sizeb(3,2),2))
 
 call fill_creation_results(sizea(1,2),sizea(3,2),n_alpha-1,str_a,str_a_m1,norb,alpha_creation_matrix_m1)
 call fill_creation_results(sizeb(1,2),sizeb(3,2),n_beta-1,str_b,str_b_m1,norb,beta_creation_matrix_m1)
+
 
 if(relativistic .eqv. .true.) then
 allocate(alpha_creation_matrix(norb,sizea(1,2),2))
@@ -192,7 +190,6 @@ allocate(beta_creation_matrix(norb,sizeb(1,2),2))
 call fill_creation_results(sizea(2,2),sizea(1,2),n_alpha,str_a_p1,str_a,norb,alpha_creation_matrix)
 call fill_creation_results(sizeb(2,2),sizeb(1,2),n_beta,str_b_p1,str_b,norb,beta_creation_matrix)
 end if
-
 
 
 
