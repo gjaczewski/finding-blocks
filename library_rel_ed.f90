@@ -802,6 +802,7 @@ if (n_spin .gt. 1) then
       do k=1,n_spin
          temp_state1 = spin_annihilation_matrix(spin_strings(b,k),b,1)
          temp_sign1 = spin_annihilation_matrix(spin_strings(b,k),b,2)
+         if (temp_state1 .ne. 0) then
          do i=1,norb
          temp_state2 = spin_creation_matrix_m1(i,temp_state1,1)
          temp_sign2 = spin_creation_matrix_m1(i,temp_state1,2)*temp_sign1
@@ -816,7 +817,8 @@ if (n_spin .gt. 1) then
                end do
             end if
             end do
-      end do
+         end if
+         end do
    end do
 !TO BE OPTIMISED
 
@@ -824,6 +826,7 @@ if (n_spin .gt. 1) then
       do k=1,n_spin
          temp_state1 = spin_annihilation_matrix(spin_strings(b,k),b,1)
          temp_sign1 = spin_annihilation_matrix(spin_strings(b,k),b,2)
+         if (temp_state1 .ne. 0) then
          do j=1,norb
          temp_state2 = spin_creation_matrix_m1(j,temp_state1,1)
          temp_sign2 = spin_creation_matrix_m1(j,temp_state1,2)*temp_sign1
@@ -831,6 +834,7 @@ if (n_spin .gt. 1) then
             do l=1,n_spin
             temp_state3 = spin_annihilation_matrix(spin_strings(temp_state2,l),temp_state2,1)
             temp_sign3 = spin_annihilation_matrix(spin_strings(temp_state2,l),temp_state2,2)*temp_sign2
+            if (temp_state3 .ne. 0) then
                do i=1,norb
                   temp_state4 = spin_creation_matrix_m1(i,temp_state3,1)
                   temp_sign4 = spin_creation_matrix_m1(i,temp_state3,2)*temp_sign3
@@ -843,9 +847,11 @@ if (n_spin .gt. 1) then
                   end do
                end if
                end do
+            end if
             end do
          end if
          end do
+      end if
       end do
    end do
 end if

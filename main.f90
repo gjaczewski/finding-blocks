@@ -18,10 +18,13 @@ program new_rel
   integer :: n_rows_alpha, n_rows_beta
   complex, allocatable :: nr_hamiltonian_alpha(:,:), nr_hamiltonian_beta(:,:)
   complex, allocatable :: hopping(:,:), interaction(:,:,:,:)
+  real :: start_time, end_time
+  real :: total_time
+  call cpu_time(start_time)
   !********* INPUT **********
   verbose = 3
   relativistic=.true.
-  norb=10
+  norb=20
 
   n_alpha=5
   n_beta=5
@@ -32,11 +35,11 @@ program new_rel
   allocate(RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt))
 ! number of orbitals cannot be equal 0
 
-  RAS_space_occ(1)=2
-  RAS_space_occ(2)=2
-  active_space=2
-  RAS_space_virt(1)=2
-  RAS_space_virt(2)=2
+  RAS_space_occ(1)=4
+  RAS_space_occ(2)=4
+  active_space=4
+  RAS_space_virt(1)=4
+  RAS_space_virt(2)=4
 
   
   !***********************
@@ -214,6 +217,9 @@ call fill_two_body_spin_part(nr_hamiltonian_beta,n_rows_beta,n_beta,sizeb(1,2),s
 
 
 write(*,*) "KONIEC"
+call cpu_time(end_time)
+total_time = end_time - start_time
+write(*,*) "Execution time: ", total_time
 call flush(6)
 end program new_rel
 
