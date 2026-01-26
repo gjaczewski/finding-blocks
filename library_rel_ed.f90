@@ -486,6 +486,7 @@ function nCr_dp(n, r) result(c)
    deallocate(another_str_temp)
 
    end do
+   call sort_states(str_s,sizes,n_s)
 end subroutine fill_spin_strings
 
 
@@ -564,6 +565,38 @@ subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_
       end do
    end do
 end subroutine string_direct_product
+
+
+subroutine sort_states(spin_strings,n_spin_strings,n_spin)
+implicit none
+integer, intent(in) :: n_spin_strings,n_spin
+integer, intent(inout) :: spin_strings(n_spin_strings,n_spin)
+real :: temp_array(n_spin_strings), temp_energy
+integer :: i,j
+integer :: temp_state(n_spin)
+if (n_spin_strings .ge. 2) then
+temp_array(:) = 0
+do i=1,n_spin_strings
+   do j=1,n_spin
+      temp_array(i) = temp_array(i) - 1/real(spin_strings(i,j))  
+   end do
+end do
+do i = 1, n_spin_strings-1
+        do j = 1, n_spin_strings-i
+            if (temp_array(j) > temp_array(j+1)) then
+                temp_state   =  spin_strings(j,:)
+                temp_energy = temp_array(j)
+
+                spin_strings(j,:) = spin_strings(j+1,:)
+                temp_array(j) = temp_array(j+1)
+
+                spin_strings(j+1,:) = temp_state
+                temp_array(j+1) = temp_energy
+            end if
+        end do
+end do
+end if
+end subroutine sort_states
 
 
 subroutine ISEQUAL(vector1,vector2,length,indicator)
@@ -757,6 +790,38 @@ end do
 end subroutine fill_creation_results
 
 
+!***********************THIS WHOLE PART MIGHT BE OPTIMISED USING SMALL MATRICE**********************
+
+
+subroutine fill_annihilation_creation_matrix(n_rows,n_spin,n_spin_strings,spin_strings,norb,annihilation_creation_matrix)
+implicit none
+integer, intent(in) :: n_rows, n_spin, n_spin_strings, norb
+integer, intent(in) :: spin_strings(n_spin_strings,n_spin)
+integer, intent(inout) :: annihilation_creation_matrix(norb,norb,n_spin_strings,2)
+integer :: i,j,k,l
+integer :: temp_string1(n_spin-1), temp_string2(n_spin-1)
+integer :: sign1,sign2
+logical :: indicator
+annihilation_creation_matrix(:,:,:,1) = 0
+annihilation_creation_matrix(:,:,:,2) = 1
+do i=1,n_rows
+   do j=1,n_spin
+      call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string1,sign1)
+      do k=1,n_spin_strings
+         do l=1,n_spin
+            call annihilation(spin_strings(k,l),spin_strings(k,:),n_spin,temp_string2,sign2)
+            call ISEQUAL(temp_string1,temp_string2,n_spin-1,indicator)
+            if (indicator .eqv. .true.) then
+               annihilation_creation_matrix(spin_strings(i,j),spin_strings(k,l),k,1) = i
+               annihilation_creation_matrix(spin_strings(i,j),spin_strings(k,l),k,2) = sign1*sign2
+               exit
+            end if
+         end do
+      end do
+   end do
+end do
+end subroutine fill_annihilation_creation_matrix
+
 subroutine fill_non_rel_one_body_part(n_rows,n_spin,n_spin_strings,spin_strings,norb,hopping,non_rel_hamiltonian)
 implicit none
 integer, intent(in) :: n_rows, n_spin, n_spin_strings, norb
@@ -768,7 +833,6 @@ integer :: temp_string1(n_spin-1), temp_string2(n_spin-1)
 integer :: sign1,sign2
 logical :: indicator
 !possible to include condition for nonzero hopping amplitudes
-!do poprawienia z uzyciem malych macierzy
 do i=1,n_rows
    do j=1,n_spin
       call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string1,sign1)
@@ -858,10 +922,40 @@ end if
 end subroutine fill_two_body_spin_part
 
 
-subroutine fill_two_body_mixed_part(two_body_mixed_matrix,n_rows_alpha,n_rows_beta,n_alpha,n_beta,n_strings_alpha,n_strings_beta,strings_alpha,strings_beta,n_strings_alpha_m1,n_strings_beta_m1,strings_alpha_m1,strings_beta_m1,interaction,norb,alpha_annihilation_matrix,alpha_creation_matrix_m1,beta_annihilation_matrix,beta_creation_matrix_m1)
+
+
+
+subroutine fill_two_body_mixed_part(two_body_mixed_matrix,n_rows_alpha,n_rows_beta,n_alpha,n_beta,strings_alpha,strings_beta,n_strings_alpha,n_strings_beta, alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix, interaction, norb)
 implicit none
-integer, intent(in) :: n_rows_alpha,n_rows_beta,n_alpha,n_beta,n_strings_alpha,n_strings_beta,n_strings_alpha_m1,n_strings_beta_m1,norb
-integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta), strings_alpha_m1(n_strings_alpha_m1,n_alpha-1), strings_beta_m1(n_strings_beta_m1,n_beta-1),alpha_annihilation_matrix(norb,n_strings_alpha,2), alpha_creation_matrix_m1(norb,n_strings_alpha_m1,2), beta_annihilation_matrix(norb,n_strings_beta,2), beta_creation_matrix_m1(norb,n_strings_beta_m1,2)
+integer, intent(in) :: n_rows_alpha,n_rows_beta,n_alpha,n_beta,n_strings_alpha,n_strings_beta, norb
+integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+integer, intent(in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2)
 complex, intent(in) :: interaction(norb,norb,norb,norb)
-complex, intent(out) :: two_body_mixed_matrix(n_rows_alpha*n_rows_beta,n_strings_alpha*n_strings_beta)
+complex, intent(out) :: two_body_mixed_matrix(n_rows_alpha,n_rows_beta,n_strings_alpha,n_strings_beta)
+integer :: i,j,k,l,p,q,r,s
+two_body_mixed_matrix(:,:,:,:) = 0
+do i=1,n_rows_alpha
+   do k=1,n_strings_alpha
+      do p=1,norb
+         do r=1,n_alpha
+            if (alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,1) .eq. i) then
+               do j=1,n_rows_beta
+                  do l=1,n_strings_beta
+                     do q=1,norb
+                        do s=1,n_beta
+                           if (beta_annihilation_creation_matrix(q,strings_beta(l,s),l,1) .eq. j) then
+                              two_body_mixed_matrix(i,j,k,l) = two_body_mixed_matrix(i,j,k,l) + interaction(p,q,r,s)*alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,2)*beta_annihilation_creation_matrix(q,strings_beta(l,s),l,2)
+                           end if
+                        end do
+                     end do
+                  end do
+               end do
+            end if
+         end do
+      end do
+   end do
+end do
 end subroutine fill_two_body_mixed_part
+
+
+!***************************

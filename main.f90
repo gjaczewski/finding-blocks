@@ -7,24 +7,25 @@ program new_rel
   integer, dimension(:,:), allocatable:: RAS_el_array_alpha,RAS_el_array_beta
   logical:: relativistic
   integer ::   NRD_spin_tmp, NRD_spin_alpha, NRD_spin_beta
-  integer :: i, j, temp, n_distributions_alpha,n_distributions_beta, n_distributions_alpha_p1,n_distributions_beta_p1, n_distributions_alpha_m1,n_distributions_beta_m1
+  integer :: i, j,k,l, mu ,nu, temp,temp1,temp2, n_distributions_alpha,n_distributions_beta, n_distributions_alpha_p1,n_distributions_beta_p1, n_distributions_alpha_m1,n_distributions_beta_m1
   integer :: max,n_combinations
   integer, allocatable :: all_combinations(:,:)
   integer:: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2),size_tot(3,2)
   integer, dimension(:,:), allocatable :: str_a, str_b, str_a_p1, str_a_m1, str_b_p1, str_b_m1
   integer, allocatable :: alpha_annihilation_matrix(:,:,:), alpha_annihilation_matrix_p1(:,:,:), beta_annihilation_matrix(:,:,:), beta_annihilation_matrix_p1(:,:,:)
   integer, allocatable :: alpha_creation_matrix(:,:,:), alpha_creation_matrix_m1(:,:,:), beta_creation_matrix(:,:,:), beta_creation_matrix_m1(:,:,:)
+  integer, allocatable :: alpha_annihilation_creation_matrix(:,:,:,:), beta_annihilation_creation_matrix(:,:,:,:)
   integer :: verbose
   integer :: n_rows_alpha, n_rows_beta
-  complex, allocatable :: nr_hamiltonian_alpha(:,:), nr_hamiltonian_beta(:,:)
-  complex, allocatable :: hopping(:,:), interaction(:,:,:,:)
+  complex, allocatable :: nr_hamiltonian_alpha(:,:), nr_hamiltonian_beta(:,:), two_body_mixed_matrix(:,:,:,:)
+  complex, allocatable :: hopping(:,:), interaction(:,:,:,:), hamiltonian_1_1(:,:)
   real :: start_time, end_time
   real :: total_time
   call cpu_time(start_time)
   !********* INPUT **********
   verbose = 3
   relativistic=.true.
-  norb=20
+  norb=10
 
   n_alpha=5
   n_beta=5
@@ -35,11 +36,11 @@ program new_rel
   allocate(RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt))
 ! number of orbitals cannot be equal 0
 
-  RAS_space_occ(1)=4
-  RAS_space_occ(2)=4
-  active_space=4
-  RAS_space_virt(1)=4
-  RAS_space_virt(2)=4
+  RAS_space_occ(1)=2
+  RAS_space_occ(2)=2
+  active_space=2
+  RAS_space_virt(1)=2
+  RAS_space_virt(2)=2
 
   
   !***********************
@@ -133,7 +134,7 @@ call flush(6)
   ! here we generate strings (alpha and beta separately)
   allocate(str_a(sizea(1,2),n_alpha))
   call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a,verbose)
-
+  
 
   allocate(str_b(sizeb(1,2),n_beta))
   call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b,verbose)
@@ -161,7 +162,7 @@ call flush(6)
      allocate(str_b_p1(sizeb(2,2),n_beta+1))
      call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b_p1,verbose)
   end if
-
+! HERE WE START  BUILDING FIRST ROW (BLOCK) OF THE HAMILTONIAN
 
 !here we generate how annihilation operator acts on states
 allocate(alpha_annihilation_matrix(norb,sizea(1,2),2))
@@ -187,19 +188,26 @@ call fill_creation_results(sizea(1,2),sizea(3,2),n_alpha-1,str_a,str_a_m1,norb,a
 call fill_creation_results(sizeb(1,2),sizeb(3,2),n_beta-1,str_b,str_b_m1,norb,beta_creation_matrix_m1)
 
 
-if(relativistic .eqv. .true.) then
-allocate(alpha_creation_matrix(norb,sizea(1,2),2))
-allocate(beta_creation_matrix(norb,sizeb(1,2),2))
-call fill_creation_results(sizea(2,2),sizea(1,2),n_alpha,str_a_p1,str_a,norb,alpha_creation_matrix)
-call fill_creation_results(sizeb(2,2),sizeb(1,2),n_beta,str_b_p1,str_b,norb,beta_creation_matrix)
-end if
-
+!********TO BE USED IN THE NEXT ROW*****
+!if(relativistic .eqv. .true.) then
+!allocate(alpha_creation_matrix(norb,sizea(1,2),2))
+!allocate(beta_creation_matrix(norb,sizeb(1,2),2))
+!call fill_creation_results(sizea(2,2),sizea(1,2),n_alpha,str_a_p1,str_a,norb,alpha_creation_matrix)
+!call fill_creation_results(sizeb(2,2),sizeb(1,2),n_beta,str_b_p1,str_b,norb,beta_creation_matrix)
+!end if
+!**********************
 
 
 !here we start to generate matrix elements of the hamiltonian
 
-n_rows_alpha = 1
-n_rows_beta = 1
+n_rows_alpha = 20
+n_rows_beta = 20
+
+allocate(alpha_annihilation_creation_matrix(norb,norb,sizea(1,2),2))
+allocate(beta_annihilation_creation_matrix(norb,norb,sizea(1,2),2))
+
+call fill_annihilation_creation_matrix(n_rows_alpha,n_alpha,sizea(1,2),str_a,norb,alpha_annihilation_creation_matrix)
+call fill_annihilation_creation_matrix(n_rows_beta,n_beta,sizeb(1,2),str_b,norb,beta_annihilation_creation_matrix)
 
 allocate(hopping(norb,norb))
 allocate(interaction(norb,norb,norb,norb))
@@ -212,8 +220,34 @@ allocate(nr_hamiltonian_beta(n_rows_beta,sizeb(1,2)))
 call fill_non_rel_one_body_part(n_rows_alpha,n_alpha,sizea(1,2),str_a,norb,hopping,nr_hamiltonian_alpha)
 call fill_non_rel_one_body_part(n_rows_beta,n_beta,sizeb(1,2),str_b,norb,hopping,nr_hamiltonian_beta)
 
+
 call fill_two_body_spin_part(nr_hamiltonian_alpha,n_rows_alpha,n_alpha,sizea(1,2),str_a,sizea(3,2),str_a_m1,interaction,norb,alpha_annihilation_matrix,alpha_creation_matrix_m1)
 call fill_two_body_spin_part(nr_hamiltonian_beta,n_rows_beta,n_beta,sizeb(1,2),str_b,sizeb(3,2),str_b_m1,interaction,norb,beta_annihilation_matrix,beta_creation_matrix_m1)
+
+
+allocate(two_body_mixed_matrix(n_rows_alpha,n_rows_beta,sizea(1,2),sizeb(1,2)))
+call fill_two_body_mixed_part(two_body_mixed_matrix,n_rows_alpha,n_rows_beta,n_alpha,n_beta,str_a,str_b,sizea(1,2),sizeb(1,2), alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix, interaction, norb)
+
+allocate(hamiltonian_1_1(n_rows_alpha*n_rows_beta,sizea(1,2)*sizeb(1,2)))
+hamiltonian_1_1(:,:) = 0
+
+!rows should be sorted somehow!!!!
+do mu=1,n_rows_alpha*n_rows_beta
+  i = (mu-1)/n_rows_beta+1
+  j = mod(mu-1,n_rows_beta)+1
+  do nu=1,sizea(1,2)*sizeb(1,2)
+    k = (nu-1)/sizeb(1,2)+1
+    l = mod(nu-1,sizeb(1,2))+1
+    if (j .eq. l) then
+      hamiltonian_1_1(mu,nu) = hamiltonian_1_1(mu,nu) + nr_hamiltonian_alpha(i,k)
+    end if
+    if (i .eq. k) then
+      hamiltonian_1_1(mu,nu) = hamiltonian_1_1(mu,nu) + nr_hamiltonian_beta(j,l)
+    end if
+    hamiltonian_1_1(mu,nu) = hamiltonian_1_1(mu,nu) + two_body_mixed_matrix(i,j,k,l)
+  end do
+end do
+
 
 
 write(*,*) "KONIEC"
