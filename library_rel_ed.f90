@@ -793,9 +793,9 @@ end subroutine fill_creation_results
 !***********************THIS WHOLE PART MIGHT BE OPTIMISED USING SMALL MATRICE**********************
 
 
-subroutine fill_annihilation_creation_matrix(n_rows,n_spin,n_spin_strings,spin_strings,norb,annihilation_creation_matrix)
+subroutine fill_annihilation_creation_matrix(n_spin,n_spin_strings,spin_strings,norb,annihilation_creation_matrix)
 implicit none
-integer, intent(in) :: n_rows, n_spin, n_spin_strings, norb
+integer, intent(in) ::  n_spin, n_spin_strings, norb
 integer, intent(in) :: spin_strings(n_spin_strings,n_spin)
 integer, intent(inout) :: annihilation_creation_matrix(norb,norb,n_spin_strings,2)
 integer :: i,j,k,l
@@ -804,7 +804,7 @@ integer :: sign1,sign2
 logical :: indicator
 annihilation_creation_matrix(:,:,:,1) = 0
 annihilation_creation_matrix(:,:,:,2) = 1
-do i=1,n_rows
+do i=1,n_spin_strings
    do j=1,n_spin
       call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string1,sign1)
       do k=1,n_spin_strings
@@ -877,6 +877,7 @@ if (n_spin .gt. 1) then
                   do j=1,norb
                      two_body_spin_matrix(a,b) = two_body_spin_matrix(a,b) + 0.5*interaction(i,j,spin_strings(b,k),j)*temp_sign2
                   end do
+                  exit
                   end if
                end do
             end if
@@ -907,6 +908,7 @@ if (n_spin .gt. 1) then
                      call ISEQUAL(spin_strings(a,:),spin_strings(temp_state4,:),n_spin,indicator)
                      if (indicator .eqv. .true.) then
                         two_body_spin_matrix(a,b) = two_body_spin_matrix(a,b) - 0.5*interaction(i,j,spin_strings(b,k),spin_strings(temp_state2,l))
+                        exit
                      end if
                   end do
                end if
@@ -945,11 +947,13 @@ do i=1,n_rows_alpha
                         do s=1,n_beta
                            if (beta_annihilation_creation_matrix(q,strings_beta(l,s),l,1) .eq. j) then
                               two_body_mixed_matrix(i,j,k,l) = two_body_mixed_matrix(i,j,k,l) + interaction(p,q,r,s)*alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,2)*beta_annihilation_creation_matrix(q,strings_beta(l,s),l,2)
+                              exit !???
                            end if
                         end do
                      end do
                   end do
                end do
+               exit !???
             end if
          end do
       end do
