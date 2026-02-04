@@ -578,7 +578,7 @@ if (n_spin_strings .ge. 2) then
 temp_array(:) = 0
 do i=1,n_spin_strings
    do j=1,n_spin
-      temp_array(i) = temp_array(i) - 1/real(spin_strings(i,j))  
+      temp_array(i) = temp_array(i) - 1/(real(spin_strings(i,j)))**2  
    end do
 end do
 do i = 1, n_spin_strings-1
@@ -821,6 +821,142 @@ do i=1,n_spin_strings
    end do
 end do
 end subroutine fill_annihilation_creation_matrix
+
+subroutine nr_matrix_vector_product(hopping,interaction,norb,strings_alpha,n_strings_alpha,n_alpha,strings_beta,n_strings_beta,n_beta,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+integer, intent(in) :: norb,n_strings_alpha,n_strings_beta, n_alpha,n_beta
+complex, intent(in) :: hopping(norb,norb),interaction(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
+integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+integer, intent(in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2)
+complex, intent(out) :: vector_new(n_strings_alpha*n_strings_beta)
+integer :: i,j,k,l, temp_state1,temp_sign1, mu,nu, temp_state2,temp_sign2,p,q,r,s
+  real :: start_time, end_time
+  real :: total_time
+  call cpu_time(start_time)
+vector_new(:) = 0
+!hopping part
+do nu=1,n_strings_alpha*n_strings_beta
+    k = (nu-1)/n_strings_beta+1
+    l = mod(nu-1,n_strings_beta)+1
+    do mu=nu+1,n_strings_alpha*n_strings_beta
+      i = (mu-1)/n_strings_beta+1
+      j = mod(mu-1,n_strings_beta)+1
+      if (j .eq. l) then
+         do q=1,n_alpha
+            do p=1,norb
+               temp_state1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,q),k,1)
+               temp_sign1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,q),k,2)
+               if (temp_state1 .eq. i) then
+                  vector_new(mu) = vector_new(mu)+vector(nu)*hopping(p,q)*temp_sign1
+                  vector_new(nu) = vector_new(nu)+vector(mu)*hopping(q,p)*temp_sign1
+                  do r=1,norb
+                     vector_new(mu) = vector_new(mu)+0.5*vector(nu)*interaction(p,r,q,r)*temp_sign1
+                     vector_new(nu) = vector_new(nu)+0.5*vector(mu)*interaction(q,r,p,r)*temp_sign1
+                  end do
+                  do s=1,n_alpha
+                     vector_new(mu) = vector_new(mu) - 0.5*vector(nu)*interaction(strings_alpha(temp_state1,s),p,q,strings_alpha(temp_state1,s))*temp_sign1
+                     vector_new(nu) = vector_new(nu) - 0.5*vector(mu)*interaction(q,strings_alpha(temp_state1,s),strings_alpha(temp_state1,s),p)*temp_sign1
+                  end do
+               else if (temp_state1 .ne. 0) then
+                outer1: do s=1,n_alpha
+                     do r=1,norb
+                        temp_state2 = alpha_annihilation_creation_matrix(r,strings_alpha(temp_state1,s),temp_state1,1)
+                        temp_sign2 = alpha_annihilation_creation_matrix(r,strings_alpha(temp_state1,s),temp_state1,2)
+                        if (temp_state2 .eq. i) then
+                           vector_new(mu) = vector_new(mu) - 0.5*vector(nu)*interaction(r,p,q,strings_alpha(temp_state1,s))*temp_sign1*temp_sign2
+                           vector_new(nu) = vector_new(nu) - 0.5*vector(mu)*interaction(q,strings_alpha(temp_state1,s),r,p)*temp_sign1*temp_sign2
+                           exit outer1
+                        end if
+                     end do
+                     end do outer1
+               end if
+            end do
+         end do
+      end if
+
+      if (i .eq. k) then
+         do q=1,n_beta
+            do p=1,norb
+               temp_state1 = beta_annihilation_creation_matrix(p,strings_beta(l,q),l,1)
+               temp_sign1 = beta_annihilation_creation_matrix(p,strings_beta(l,q),l,2)
+               if (temp_state1 .eq. j) then
+                  vector_new(mu) = vector_new(mu)+vector(nu)*hopping(p,q)*temp_sign1
+                  vector_new(nu) = vector_new(nu)+vector(mu)*hopping(q,p)*temp_sign1
+                  do r=1,norb
+                     vector_new(mu) = vector_new(mu)+0.5*vector(nu)*interaction(p,r,q,r)*temp_sign1
+                     vector_new(nu) = vector_new(nu)+0.5*vector(mu)*interaction(q,r,p,r)*temp_sign1
+                  end do
+                  do s=1,n_beta
+                     vector_new(mu) = vector_new(mu) - 0.5*vector(nu)*interaction(strings_beta(temp_state1,s),p,q,strings_beta(temp_state1,s))*temp_sign1
+                     vector_new(nu) = vector_new(nu) - 0.5*vector(mu)*interaction(q,strings_beta(temp_state1,s),strings_beta(temp_state1,s),p)*temp_sign1
+                  end do
+               else if (temp_state1 .ne. 0) then
+                outer2: do s=1,n_beta
+                     do r=1,norb
+                        temp_state2 = beta_annihilation_creation_matrix(r,strings_beta(temp_state1,s),temp_state1,1)
+                        temp_sign2 = beta_annihilation_creation_matrix(r,strings_beta(temp_state1,s),temp_state1,2)
+                        if (temp_state2 .eq. i) then
+                           vector_new(mu) = vector_new(mu) - 0.5*vector(nu)*interaction(r,p,q,strings_beta(temp_state1,s))*temp_sign1*temp_sign2
+                           vector_new(nu) = vector_new(nu) - 0.5*vector(mu)*interaction(q,strings_beta(temp_state1,s),r,p)*temp_sign1*temp_sign2
+                           exit outer2
+                        end if
+                        end do
+                     end do outer2
+               end if
+            end do
+         end do
+      end if
+
+do r=1,n_alpha
+ outer3:  do p=1,norb
+      temp_state1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,1)
+      temp_sign1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,2)
+      if (temp_state1 .eq. i) then
+         do s=1,n_beta
+            do q=1,norb
+               temp_state2 = beta_annihilation_creation_matrix(q,strings_beta(l,s),l,1)
+               temp_sign2 = beta_annihilation_creation_matrix(q,strings_beta(l,s),l,2)
+               if (temp_state2 .eq. j) then
+                  vector_new(mu) = vector_new(mu) + vector(nu)*interaction(p,q,r,s)*temp_sign1*temp_sign2
+                  vector_new(nu) = vector_new(nu) + vector(mu)*interaction(r,s,p,q)*temp_sign1*temp_sign2
+                  exit outer3
+               end if
+            end do
+         end do
+      end if
+   end do outer3
+end do
+
+!write(*,*) nu,mu
+    end do
+if (nu .eq. 1000) then
+call cpu_time(end_time)
+total_time = end_time - start_time
+write(*,*)1000,n_strings_alpha*n_strings_beta, total_time
+exit
+end if
+end do
+end subroutine nr_matrix_vector_product
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 subroutine fill_non_rel_one_body_part(n_rows,n_spin,n_spin_strings,spin_strings,norb,hopping,non_rel_hamiltonian)
 implicit none
