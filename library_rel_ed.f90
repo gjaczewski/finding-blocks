@@ -756,7 +756,7 @@ do i=1,n_spin_strings
       end do
    end do
 end do
-else
+else if (n_spin .eq. 1) then
 do i=1,n_spin_strings
    spin_annihilation_matrix(spin_strings(i,1),i,1) = 1
 end do
@@ -804,6 +804,7 @@ integer :: sign1,sign2
 logical :: indicator
 annihilation_creation_matrix(:,:,:,1) = 0
 annihilation_creation_matrix(:,:,:,2) = 1
+if (n_spin .gt. 1) then
 do i=1,n_spin_strings
    do j=1,n_spin
       call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string1,sign1)
@@ -820,282 +821,108 @@ do i=1,n_spin_strings
       end do
    end do
 end do
+else if (n_spin .eq. 1) then
+do i=1,n_spin_strings
+      do k=1,n_spin_strings
+         annihilation_creation_matrix(spin_strings(i,1),spin_strings(k,1),k,1) = i
+   end do
+end do
+end if
 end subroutine fill_annihilation_creation_matrix
 
-subroutine nr_matrix_vector_product(hopping,interaction,norb,strings_alpha,n_strings_alpha,n_alpha,strings_beta,n_strings_beta,n_beta,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-integer, intent(in) :: norb,n_strings_alpha,n_strings_beta, n_alpha,n_beta
-complex, intent(in) :: hopping(norb,norb),interaction(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
-integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-integer, intent(in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2)
-complex, intent(out) :: vector_new(n_strings_alpha*n_strings_beta)
-integer :: i,j,k,l, temp_state1,temp_sign1, mu,nu, temp_state2,temp_sign2,p,q,r,s
-  real :: start_time, end_time
-  real :: total_time
-  call cpu_time(start_time)
-vector_new(:) = 0
-!hopping part
+
+subroutine fill_nr_single_spin_hamiltonian(spin_strings,n_spin_strings,n_spin,norb,hopping,interaction,spin_annihilation_creation_matrix,spin_nr_hamiltonian)
+integer, intent(in) :: n_spin_strings,n_spin,norb
+integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_annihilation_creation_matrix(norb,norb,n_spin_strings,2)
+complex, intent(in) :: hopping(norb,norb), interaction(norb,norb,norb,norb)
+complex, intent(out) :: spin_nr_hamiltonian(n_spin_strings,n_spin_strings)
+integer :: i,j,p,q,r,s, temp_state1,temp_state2,temp_sign1,temp_sign2
+do j=1,n_spin_strings
+   do q=1,n_spin
+      do p=1,norb
+         temp_state1 = spin_annihilation_creation_matrix(p,spin_strings(j,q),j,1)
+         temp_sign1 = spin_annihilation_creation_matrix(p,spin_strings(j,q),j,2)
+         if (temp_state1 .ne. 0) then
+            spin_nr_hamiltonian(temp_state1,j) = spin_nr_hamiltonian(temp_state1,j) + temp_sign1*hopping(p,q)
+            do r=1,norb
+               spin_nr_hamiltonian(temp_state1,j) = spin_nr_hamiltonian(temp_state1,j) + 0.5*temp_sign1*interaction(p,r,q,r)
+               do s=1,n_spin
+                  temp_state2 = spin_annihilation_creation_matrix(r,spin_strings(temp_state1,s),temp_state1,1)
+                  temp_sign2 = temp_sign1*spin_annihilation_creation_matrix(r,spin_strings(temp_state1,s),temp_state1,2)
+                  if (temp_state2 .ne. 0) then
+                     spin_nr_hamiltonian(temp_state2,j) = spin_nr_hamiltonian(temp_state2,j) - 0.5*temp_sign2*interaction(r,p,q,s) 
+                  end if
+               end do
+            end do
+         end if
+      end do
+   end do
+end do
+end subroutine fill_nr_single_spin_hamiltonian
+
+
+subroutine nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
+integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_beta), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
+complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta)
+integer :: mu,nu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
+
 do nu=1,n_strings_alpha*n_strings_beta
+write(*,*) nu,n_strings_alpha*n_strings_beta
     k = (nu-1)/n_strings_beta+1
     l = mod(nu-1,n_strings_beta)+1
     do mu=nu+1,n_strings_alpha*n_strings_beta
       i = (mu-1)/n_strings_beta+1
       j = mod(mu-1,n_strings_beta)+1
-      if (j .eq. l) then
-         do q=1,n_alpha
-            do p=1,norb
-               temp_state1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,q),k,1)
-               temp_sign1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,q),k,2)
-               if (temp_state1 .eq. i) then
-                  vector_new(mu) = vector_new(mu)+vector(nu)*hopping(p,q)*temp_sign1
-                  vector_new(nu) = vector_new(nu)+vector(mu)*hopping(q,p)*temp_sign1
-                  do r=1,norb
-                     vector_new(mu) = vector_new(mu)+0.5*vector(nu)*interaction(p,r,q,r)*temp_sign1
-                     vector_new(nu) = vector_new(nu)+0.5*vector(mu)*interaction(q,r,p,r)*temp_sign1
-                  end do
-                  do s=1,n_alpha
-                     vector_new(mu) = vector_new(mu) - 0.5*vector(nu)*interaction(strings_alpha(temp_state1,s),p,q,strings_alpha(temp_state1,s))*temp_sign1
-                     vector_new(nu) = vector_new(nu) - 0.5*vector(mu)*interaction(q,strings_alpha(temp_state1,s),strings_alpha(temp_state1,s),p)*temp_sign1
-                  end do
-               else if (temp_state1 .ne. 0) then
-                outer1: do s=1,n_alpha
-                     do r=1,norb
-                        temp_state2 = alpha_annihilation_creation_matrix(r,strings_alpha(temp_state1,s),temp_state1,1)
-                        temp_sign2 = alpha_annihilation_creation_matrix(r,strings_alpha(temp_state1,s),temp_state1,2)
-                        if (temp_state2 .eq. i) then
-                           vector_new(mu) = vector_new(mu) - 0.5*vector(nu)*interaction(r,p,q,strings_alpha(temp_state1,s))*temp_sign1*temp_sign2
-                           vector_new(nu) = vector_new(nu) - 0.5*vector(mu)*interaction(q,strings_alpha(temp_state1,s),r,p)*temp_sign1*temp_sign2
-                           exit outer1
-                        end if
-                     end do
-                     end do outer1
-               end if
-            end do
-         end do
-      end if
-
       if (i .eq. k) then
-         do q=1,n_beta
-            do p=1,norb
-               temp_state1 = beta_annihilation_creation_matrix(p,strings_beta(l,q),l,1)
-               temp_sign1 = beta_annihilation_creation_matrix(p,strings_beta(l,q),l,2)
-               if (temp_state1 .eq. j) then
-                  vector_new(mu) = vector_new(mu)+vector(nu)*hopping(p,q)*temp_sign1
-                  vector_new(nu) = vector_new(nu)+vector(mu)*hopping(q,p)*temp_sign1
+         vector_new(mu) = vector_new(mu) + beta_hamiltonian(j,l)*vector(nu)
+         vector_new(nu) = vector_new(nu) + beta_hamiltonian(l,j)*vector(mu)
+      end if
+      if (j .eq. l) then 
+         vector_new(mu) = vector_new(mu) + alpha_hamiltonian(i,k)*vector(nu)
+         vector_new(nu) = vector_new(nu) + alpha_hamiltonian(k,i)*vector(mu)
+      end if
+outer1: do q=1,n_alpha
+         do p=1,norb
+            temp_state1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,q),k,1)
+            temp_sign1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,q),k,2)
+            if (temp_state1 .eq. i) then
+               do s=1,n_beta
                   do r=1,norb
-                     vector_new(mu) = vector_new(mu)+0.5*vector(nu)*interaction(p,r,q,r)*temp_sign1
-                     vector_new(nu) = vector_new(nu)+0.5*vector(mu)*interaction(q,r,p,r)*temp_sign1
-                  end do
-                  do s=1,n_beta
-                     vector_new(mu) = vector_new(mu) - 0.5*vector(nu)*interaction(strings_beta(temp_state1,s),p,q,strings_beta(temp_state1,s))*temp_sign1
-                     vector_new(nu) = vector_new(nu) - 0.5*vector(mu)*interaction(q,strings_beta(temp_state1,s),strings_beta(temp_state1,s),p)*temp_sign1
-                  end do
-               else if (temp_state1 .ne. 0) then
-                outer2: do s=1,n_beta
-                     do r=1,norb
-                        temp_state2 = beta_annihilation_creation_matrix(r,strings_beta(temp_state1,s),temp_state1,1)
-                        temp_sign2 = beta_annihilation_creation_matrix(r,strings_beta(temp_state1,s),temp_state1,2)
-                        if (temp_state2 .eq. i) then
-                           vector_new(mu) = vector_new(mu) - 0.5*vector(nu)*interaction(r,p,q,strings_beta(temp_state1,s))*temp_sign1*temp_sign2
-                           vector_new(nu) = vector_new(nu) - 0.5*vector(mu)*interaction(q,strings_beta(temp_state1,s),r,p)*temp_sign1*temp_sign2
-                           exit outer2
-                        end if
-                        end do
-                     end do outer2
-               end if
-            end do
-         end do
-      end if
-
-do r=1,n_alpha
- outer3:  do p=1,norb
-      temp_state1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,1)
-      temp_sign1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,2)
-      if (temp_state1 .eq. i) then
-         do s=1,n_beta
-            do q=1,norb
-               temp_state2 = beta_annihilation_creation_matrix(q,strings_beta(l,s),l,1)
-               temp_sign2 = beta_annihilation_creation_matrix(q,strings_beta(l,s),l,2)
-               if (temp_state2 .eq. j) then
-                  vector_new(mu) = vector_new(mu) + vector(nu)*interaction(p,q,r,s)*temp_sign1*temp_sign2
-                  vector_new(nu) = vector_new(nu) + vector(mu)*interaction(r,s,p,q)*temp_sign1*temp_sign2
-                  exit outer3
-               end if
-            end do
-         end do
-      end if
-   end do outer3
-end do
-
-!write(*,*) nu,mu
-    end do
-if (nu .eq. 1000) then
-call cpu_time(end_time)
-total_time = end_time - start_time
-write(*,*)1000,n_strings_alpha*n_strings_beta, total_time
-exit
-end if
-end do
-end subroutine nr_matrix_vector_product
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-subroutine fill_non_rel_one_body_part(n_rows,n_spin,n_spin_strings,spin_strings,norb,hopping,non_rel_hamiltonian)
-implicit none
-integer, intent(in) :: n_rows, n_spin, n_spin_strings, norb
-integer, intent(in) :: spin_strings(n_spin_strings,n_spin)
-complex, intent(in) :: hopping(norb,norb)
-complex, intent(inout) :: non_rel_hamiltonian(n_rows,n_spin_strings)
-integer :: i,j,k,l
-integer :: temp_string1(n_spin-1), temp_string2(n_spin-1)
-integer :: sign1,sign2
-logical :: indicator
-!possible to include condition for nonzero hopping amplitudes
-do i=1,n_rows
-   do j=1,n_spin
-      call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string1,sign1)
-      do k=1,n_spin_strings
-         do l=1,n_spin
-            call annihilation(spin_strings(k,l),spin_strings(k,:),n_spin,temp_string2,sign2)
-            call ISEQUAL(temp_string1,temp_string2,n_spin-1,indicator)
-            if (indicator .eqv. .true.) then
-               non_rel_hamiltonian(i,k) = non_rel_hamiltonian(i,k)+sign1*sign2*hopping(spin_strings(i,j),spin_strings(k,l))
-               exit
-            end if
-         end do
-      end do
-   end do
-end do
-
-end subroutine fill_non_rel_one_body_part
-
-
-subroutine fill_two_body_spin_part(two_body_spin_matrix,n_rows,n_spin,n_spin_strings,spin_strings,n_spin_strings_m1,spin_strings_m1,interaction,norb,spin_annihilation_matrix,spin_creation_matrix_m1)
-implicit none
-integer, intent(in) :: n_rows,n_spin,n_spin_strings,n_spin_strings_m1,norb
-integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_strings_m1(n_spin_strings_m1,n_spin-1), spin_annihilation_matrix(norb,n_spin_strings,2), spin_creation_matrix_m1(norb,n_spin_strings_m1,2)
-complex, intent(in) :: interaction(norb,norb,norb,norb)
-complex, intent(inout) :: two_body_spin_matrix(n_rows,n_spin_strings)
-integer :: temp_state1,temp_state2, temp_sign1,temp_sign2, temp_state3,temp_state4,temp_sign3,temp_sign4
-integer :: a,b,i,j,k,l
-logical :: indicator
-if (n_spin .gt. 1) then
-   do b=1,n_spin_strings
-      do k=1,n_spin
-         temp_state1 = spin_annihilation_matrix(spin_strings(b,k),b,1)
-         temp_sign1 = spin_annihilation_matrix(spin_strings(b,k),b,2)
-         if (temp_state1 .ne. 0) then
-         do i=1,norb
-         temp_state2 = spin_creation_matrix_m1(i,temp_state1,1)
-         temp_sign2 = spin_creation_matrix_m1(i,temp_state1,2)*temp_sign1
-               if (temp_state2 .ne. 0) then
-               do a=1,n_rows
-                  call ISEQUAL(spin_strings(a,:),spin_strings(temp_state2,:),n_spin,indicator)
-                  if (indicator .eqv. .true.) then
-                  do j=1,norb
-                     two_body_spin_matrix(a,b) = two_body_spin_matrix(a,b) + 0.5*interaction(i,j,spin_strings(b,k),j)*temp_sign2
-                  end do
-                  exit
-                  end if
-               end do
-            end if
-            end do
-         end if
-         end do
-   end do
-!TO BE OPTIMISED
-
-   do b=1,n_spin_strings
-      do k=1,n_spin
-         temp_state1 = spin_annihilation_matrix(spin_strings(b,k),b,1)
-         temp_sign1 = spin_annihilation_matrix(spin_strings(b,k),b,2)
-         if (temp_state1 .ne. 0) then
-         do j=1,norb
-         temp_state2 = spin_creation_matrix_m1(j,temp_state1,1)
-         temp_sign2 = spin_creation_matrix_m1(j,temp_state1,2)*temp_sign1
-         if (temp_state2 .ne. 0) then
-            do l=1,n_spin
-            temp_state3 = spin_annihilation_matrix(spin_strings(temp_state2,l),temp_state2,1)
-            temp_sign3 = spin_annihilation_matrix(spin_strings(temp_state2,l),temp_state2,2)*temp_sign2
-            if (temp_state3 .ne. 0) then
-               do i=1,norb
-                  temp_state4 = spin_creation_matrix_m1(i,temp_state3,1)
-                  temp_sign4 = spin_creation_matrix_m1(i,temp_state3,2)*temp_sign3
-                  if (temp_state4 .ne. 0) then
-                  do a=1,n_rows
-                     call ISEQUAL(spin_strings(a,:),spin_strings(temp_state4,:),n_spin,indicator)
-                     if (indicator .eqv. .true.) then
-                        two_body_spin_matrix(a,b) = two_body_spin_matrix(a,b) - 0.5*interaction(i,j,spin_strings(b,k),spin_strings(temp_state2,l))
-                        exit
+                     temp_state2 = beta_annihilation_creation_matrix(r,strings_beta(l,s),l,1)
+                     temp_sign2 = beta_annihilation_creation_matrix(r,strings_beta(l,s),l,1)
+                     if (temp_state2 .eq. j) then
+                        vector_new(mu) = vector_new(mu) + vector(nu)*interaction(p,strings_alpha(k,q),r,strings_beta(l,s))*temp_sign1*temp_sign2
+                        vector_new(nu) = vector_new(nu) + vector(mu)*interaction(r,strings_beta(l,s),p,strings_alpha(k,q))*temp_sign1*temp_sign2
+                        exit outer1
                      end if
                   end do
-               end if
                end do
             end if
-            end do
-         end if
          end do
-      end if
-      end do
-   end do
-end if
-end subroutine fill_two_body_spin_part
-
-
-
-
-
-subroutine fill_two_body_mixed_part(two_body_mixed_matrix,n_rows_alpha,n_rows_beta,n_alpha,n_beta,strings_alpha,strings_beta,n_strings_alpha,n_strings_beta, alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix, interaction, norb)
-implicit none
-integer, intent(in) :: n_rows_alpha,n_rows_beta,n_alpha,n_beta,n_strings_alpha,n_strings_beta, norb
-integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-integer, intent(in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2)
-complex, intent(in) :: interaction(norb,norb,norb,norb)
-complex, intent(out) :: two_body_mixed_matrix(n_rows_alpha,n_rows_beta,n_strings_alpha,n_strings_beta)
-integer :: i,j,k,l,p,q,r,s
-two_body_mixed_matrix(:,:,:,:) = 0
-do i=1,n_rows_alpha
-   do k=1,n_strings_alpha
-      do p=1,norb
-         do r=1,n_alpha
-            if (alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,1) .eq. i) then
-               do j=1,n_rows_beta
-                  do l=1,n_strings_beta
-                     do q=1,norb
-                        do s=1,n_beta
-                           if (beta_annihilation_creation_matrix(q,strings_beta(l,s),l,1) .eq. j) then
-                              two_body_mixed_matrix(i,j,k,l) = two_body_mixed_matrix(i,j,k,l) + interaction(p,q,r,s)*alpha_annihilation_creation_matrix(p,strings_alpha(k,r),k,2)*beta_annihilation_creation_matrix(q,strings_beta(l,s),l,2)
-                              exit !???
-                           end if
-                        end do
-                     end do
-                  end do
-               end do
-               exit !???
-            end if
-         end do
-      end do
-   end do
+      end do outer1
+    end do
 end do
-end subroutine fill_two_body_mixed_part
+end subroutine nr_matrix_vector_product
 
 
-!***************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

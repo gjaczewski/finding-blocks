@@ -16,7 +16,7 @@ program new_rel
   integer, allocatable :: alpha_annihilation_creation_matrix(:,:,:,:), beta_annihilation_creation_matrix(:,:,:,:),alpha_annihilation_creation_matrix_p1(:,:,:,:), beta_annihilation_creation_matrix_p1(:,:,:,:),alpha_annihilation_creation_matrix_m1(:,:,:,:), beta_annihilation_creation_matrix_m1(:,:,:,:)
   integer :: verbose
   integer :: n_rows_alpha, n_rows_beta
-
+  complex, allocatable :: alpha_hamiltonian(:,:), beta_hamiltonian(:,:),alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:),alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
   complex, allocatable :: hopping(:,:), interaction(:,:,:,:),hso(:,:),vector(:),vector_new(:)
   real :: start_time, end_time
   real :: total_time
@@ -138,7 +138,9 @@ call flush(6)
   allocate(str_b(sizeb(1,2),n_beta))
   call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b,verbose)
   
-  if (n_alpha .gt. 1) then
+  
+  if (relativistic .eqv. .true.) then
+    if (n_alpha .gt. 1) then
   allocate(str_a_m1(sizea(3,2),n_alpha-1))
   call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),str_a_m1,verbose)
   else
@@ -153,37 +155,22 @@ call flush(6)
   allocate(str_b_m1(sizeb(3,2),1))
   str_b_m1(sizeb(3,2),:) = 0 !vacuum
   end if
-  
-  if (relativistic .eqv. .true.) then
      allocate(str_a_p1(sizea(2,2),n_alpha+1))
      call fill_spin_strings(n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),str_a_p1,verbose)
 
      allocate(str_b_p1(sizeb(2,2),n_beta+1))
      call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b_p1,verbose)
-  end if
 
 !here we generate how annihilation operator acts on states
 allocate(alpha_annihilation_matrix(norb,sizea(1,2),2))
 allocate(beta_annihilation_matrix(norb,sizeb(1,2),2))
-
 call fill_annihilation_results(sizea(3,2),sizea(1,2),n_alpha,str_a_m1,str_a,norb,alpha_annihilation_matrix)
 call fill_annihilation_results(sizeb(3,2),sizeb(1,2),n_beta,str_b_m1,str_b,norb,beta_annihilation_matrix)
-
-if (relativistic .eqv. .true.) then
 allocate(alpha_annihilation_matrix_p1(norb,sizea(2,2),2))
 allocate(beta_annihilation_matrix_p1(norb,sizeb(2,2),2))
 call fill_annihilation_results(sizea(1,2),sizea(2,2),n_alpha+1,str_a,str_a_p1,norb,alpha_annihilation_matrix_p1)
 call fill_annihilation_results(sizeb(1,2),sizeb(2,2),n_beta+1,str_b,str_b_p1,norb,beta_annihilation_matrix_p1)
-end if
-
-!here we generate how pair of operators acts on states
-allocate(alpha_annihilation_creation_matrix(norb,norb,sizea(1,2),2))
-allocate(beta_annihilation_creation_matrix(norb,norb,sizeb(1,2),2))
-
-call fill_annihilation_creation_matrix(n_alpha,sizea(1,2),str_a,norb,alpha_annihilation_creation_matrix)
-call fill_annihilation_creation_matrix(n_beta,sizeb(1,2),str_b,norb,beta_annihilation_creation_matrix)
-
-if (relativistic .eqv. .true.) then
+!here we generate how pair of operators acts on states (REL)
 allocate(alpha_annihilation_creation_matrix_p1(norb,norb,sizea(2,2),2))
 allocate(beta_annihilation_creation_matrix_p1(norb,norb,sizeb(2,2),2))
 
@@ -198,6 +185,13 @@ call fill_annihilation_creation_matrix(n_beta-1,sizeb(3,2),str_b_m1,norb,beta_an
 end if
 
 
+!here we generate how pair of operators acts on states (NONREL)
+allocate(alpha_annihilation_creation_matrix(norb,norb,sizea(1,2),2))
+allocate(beta_annihilation_creation_matrix(norb,norb,sizeb(1,2),2))
+
+call fill_annihilation_creation_matrix(n_alpha,sizea(1,2),str_a,norb,alpha_annihilation_creation_matrix)
+call fill_annihilation_creation_matrix(n_beta,sizeb(1,2),str_b,norb,beta_annihilation_creation_matrix)
+
 
 allocate(hopping(norb,norb))
 allocate(interaction(norb,norb,norb,norb))
@@ -208,16 +202,37 @@ allocate(hso(norb,norb))
 hso(:,:) = 1
 end if 
 
+allocate(alpha_hamiltonian(sizea(1,2),sizea(1,2)))
+allocate(beta_hamiltonian(sizeb(1,2),sizeb(1,2)))
+
+call fill_nr_single_spin_hamiltonian(str_a,sizea(1,2),n_alpha,norb,hopping,interaction,alpha_annihilation_creation_matrix,alpha_hamiltonian)
+call fill_nr_single_spin_hamiltonian(str_b,sizeb(1,2),n_beta,norb,hopping,interaction,beta_annihilation_creation_matrix,beta_hamiltonian)
+
+if (relativistic .eqv. .true.) then
+allocate(alpha_hamiltonian_p1(sizea(2,2),sizea(2,2)))
+allocate(beta_hamiltonian_p1(sizeb(2,2),sizeb(2,2)))
+
+call fill_nr_single_spin_hamiltonian(str_a_p1,sizea(2,2),n_alpha+1,norb,hopping,interaction,alpha_annihilation_creation_matrix_p1,alpha_hamiltonian_p1)
+call fill_nr_single_spin_hamiltonian(str_b_p1,sizeb(2,2),n_beta+1,norb,hopping,interaction,beta_annihilation_creation_matrix_p1,beta_hamiltonian_p1)
+
+allocate(alpha_hamiltonian_m1(sizea(3,2),sizea(3,2)))
+allocate(beta_hamiltonian_m1(sizeb(3,2),sizeb(3,2)))
+
+call fill_nr_single_spin_hamiltonian(str_a_m1,sizea(3,2),n_alpha-1,norb,hopping,interaction,alpha_annihilation_creation_matrix_m1,alpha_hamiltonian_m1)
+call fill_nr_single_spin_hamiltonian(str_b_m1,sizeb(3,2),n_beta-1,norb,hopping,interaction,beta_annihilation_creation_matrix_m1,beta_hamiltonian_m1)
+end if
+
 allocate(vector(sizea(1,2)*sizeb(1,2)))
 allocate(vector_new(sizea(1,2)*sizeb(1,2)))
 vector(:) = 1
-call nr_matrix_vector_product(hopping,interaction,norb,str_a,sizea(1,2),n_alpha,str_b,sizeb(1,2),n_beta,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+vector_new(:) = 0
+call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
 
 
 write(*,*) "KONIEC"
 call cpu_time(end_time)
 total_time = end_time - start_time
-write(*,*) "Execution time: ", total_time, size_tot(1,1),size_tot(2,1),size_tot(3,1)
+write(*,*) "Execution time: ", total_time, size_tot(1,2),size_tot(2,2),size_tot(3,2)
 call flush(6)
 end program new_rel
 
