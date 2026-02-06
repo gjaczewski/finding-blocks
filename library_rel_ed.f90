@@ -617,83 +617,7 @@ implicit none
 end subroutine ISEQUAL
 
 
-subroutine sort(a, n)
-    implicit none
-    integer, intent(in)    :: n
-    integer, intent(inout) :: a(n)
-    integer :: i, j, temp
 
-    do i = 1, n-1
-        do j = 1, n-i
-            if (a(j) > a(j+1)) then
-                temp   = a(j)
-                a(j)   = a(j+1)
-                a(j+1) = temp
-            end if
-        end do
-    end do
-end subroutine sort
-
-
-subroutine find_number(strings_alpha,strings_beta,string_alpha,string_beta,n_strings_alpha,n_strings_beta,n_alpha,n_beta,string_number)
-implicit none
-integer, intent(in) :: n_strings_alpha,n_strings_beta,n_alpha,n_beta
-integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-integer, intent(in) :: string_alpha(n_alpha), string_beta(n_beta)
-integer, intent(inout) :: string_number
-integer :: i, j, k
-logical :: indicator
-do i=1,n_strings_alpha
-   call ISEQUAL(string_alpha,strings_alpha(i,:),n_alpha,indicator)
-   if (indicator .eqv. .true.) then
-      j = i
-      exit
-   end if
-end do
-
-do i=1,n_strings_beta
-   call ISEQUAL(string_beta,strings_beta(i,:),n_beta,indicator)
-   if (indicator .eqv. .true.) then
-      k = i
-      exit
-   end if
-end do
-string_number = (j-1)*n_strings_beta+k
-end subroutine find_number
-
-
-subroutine creation(orbital,string_spin,n_spin,new_string_spin,sign)
-implicit none
-integer, intent(in) :: orbital,n_spin
-integer, intent(in) :: string_spin(n_spin)
-integer, intent(out) :: new_string_spin(n_spin+1)
-integer, intent(out) :: sign
-integer :: i,j
-logical :: check
-check = .true.
-do i=1,n_spin
-   if (string_spin(i) .eq. orbital) then
-      check = .false.
-      exit
-   end if 
-end do
-if (check .eqv. .true.) then
-   do i=1,n_spin
-   new_string_spin(i+1) = string_spin(i)
-   end do
-   new_string_spin(1) = orbital
-   call sort(new_string_spin,n_spin+1)
-   do j=1,n_spin+1
-      if (new_string_spin(j) .eq. orbital) then
-      sign = (-1)**(j-1)
-      exit
-      end if
-   end do
-else
-   sign = 1
-   new_string_spin(:) = 0
-end if
-end subroutine creation
 
 
 subroutine annihilation(orbital,string_spin,n_spin,new_string_spin,sign)
@@ -866,53 +790,150 @@ integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
 integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
 complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_beta), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
 complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta)
+complex :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
 integer :: mu,nu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
-
-do nu=1,n_strings_alpha*n_strings_beta
-write(*,*) nu,n_strings_alpha*n_strings_beta
-    k = (nu-1)/n_strings_beta+1
-    l = mod(nu-1,n_strings_beta)+1
-    do mu=nu+1,n_strings_alpha*n_strings_beta
-      i = (mu-1)/n_strings_beta+1
-      j = mod(mu-1,n_strings_beta)+1
-      if (i .eq. k) then
-         vector_new(mu) = vector_new(mu) + beta_hamiltonian(j,l)*vector(nu)
-         vector_new(nu) = vector_new(nu) + beta_hamiltonian(l,j)*vector(mu)
-      end if
-      if (j .eq. l) then 
-         vector_new(mu) = vector_new(mu) + alpha_hamiltonian(i,k)*vector(nu)
-         vector_new(nu) = vector_new(nu) + alpha_hamiltonian(k,i)*vector(mu)
-      end if
-outer1: do q=1,n_alpha
-         do p=1,norb
-            temp_state1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,q),k,1)
-            temp_sign1 = alpha_annihilation_creation_matrix(p,strings_alpha(k,q),k,2)
-            if (temp_state1 .eq. i) then
-               do s=1,n_beta
-                  do r=1,norb
-                     temp_state2 = beta_annihilation_creation_matrix(r,strings_beta(l,s),l,1)
-                     temp_sign2 = beta_annihilation_creation_matrix(r,strings_beta(l,s),l,1)
-                     if (temp_state2 .eq. j) then
-                        vector_new(mu) = vector_new(mu) + vector(nu)*interaction(p,strings_alpha(k,q),r,strings_beta(l,s))*temp_sign1*temp_sign2
-                        vector_new(nu) = vector_new(nu) + vector(mu)*interaction(r,strings_beta(l,s),p,strings_alpha(k,q))*temp_sign1*temp_sign2
-                        exit outer1
-                     end if
+new_table(:,:) = 0
+do i=1,n_strings_alpha
+   mu = (i-1)*n_strings_beta+1
+   do j=1,n_strings_beta
+      temp_table(i,j) = vector(mu)
+      mu = mu + 1
+   end do
+end do
+do i=1,n_strings_alpha
+   do j=1,n_strings_beta
+      do k=1,n_strings_alpha
+         new_table(i,j) = new_table(i,j) + temp_table(k,j)*alpha_hamiltonian(i,k)
+      end do
+      do l=1,n_strings_beta
+         new_table(i,j) = new_table(i,j) + temp_table(i,l)*beta_hamiltonian(j,l)
+      end do
+      do p=1,n_alpha
+         do r=1,norb
+            temp_state1 = alpha_annihilation_creation_matrix(r,strings_alpha(i,p),i,1)
+            if (temp_state1 .ne. 0) then
+               temp_sign1 = alpha_annihilation_creation_matrix(r,strings_alpha(i,p),i,2)
+               do q=1,n_beta
+                  do s=1,norb
+                     temp_state2 = beta_annihilation_creation_matrix(s,strings_beta(j,q),j,1)
+                     if (temp_state2 .ne. 0) then
+                        temp_sign2 = temp_sign1*beta_annihilation_creation_matrix(s,strings_beta(j,q),j,2)
+                        new_table(i,j) = new_table(i,j) + temp_sign2*temp_table(temp_state1,temp_state2)*interaction(strings_alpha(i,p),strings_beta(j,q),r,s)
+                     end if 
                   end do
-               end do
+               end do   
             end if
          end do
-      end do outer1
-    end do
+      end do
+   end do
+end do
+do i=1,n_strings_alpha
+   mu = (i-1)*n_strings_beta+1
+   do j=1,n_strings_beta
+      vector_new(mu) = new_table(i,j)
+      mu = mu + 1
+   end do
 end do
 end subroutine nr_matrix_vector_product
 
 
+subroutine generate_diagonal_elements(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,diagonal)
+integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
+integer, intent (in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_beta), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb)
+real, intent(out) :: diagonal(n_strings_alpha*n_strings_beta)
+integer :: mu,i,j,p,q
+do mu=1,n_strings_alpha*n_strings_beta
+   i = (mu-1)/n_strings_beta+1
+   j = mod(mu-1,n_strings_beta)+1
+   diagonal(mu) = alpha_hamiltonian(i,i)+beta_hamiltonian(j,j)
+   do p=1,n_alpha
+      do q=1,n_beta
+         diagonal(mu) = diagonal(mu) + interaction(strings_alpha(i,p),strings_beta(j,q),strings_alpha(i,p),strings_beta(j,q))
+      end do
+   end do
+end do
+end subroutine generate_diagonal_elements
+!**********UNUSED, BUT POTENTIALLY USEFUL ROUTINES**************
 
 
+subroutine sort(a, n)
+    implicit none
+    integer, intent(in)    :: n
+    integer, intent(inout) :: a(n)
+    integer :: i, j, temp
+
+    do i = 1, n-1
+        do j = 1, n-i
+            if (a(j) > a(j+1)) then
+                temp   = a(j)
+                a(j)   = a(j+1)
+                a(j+1) = temp
+            end if
+        end do
+    end do
+end subroutine sort
 
 
+subroutine find_number(strings_alpha,strings_beta,string_alpha,string_beta,n_strings_alpha,n_strings_beta,n_alpha,n_beta,string_number)
+implicit none
+integer, intent(in) :: n_strings_alpha,n_strings_beta,n_alpha,n_beta
+integer, intent(in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+integer, intent(in) :: string_alpha(n_alpha), string_beta(n_beta)
+integer, intent(inout) :: string_number
+integer :: i, j, k
+logical :: indicator
+do i=1,n_strings_alpha
+   call ISEQUAL(string_alpha,strings_alpha(i,:),n_alpha,indicator)
+   if (indicator .eqv. .true.) then
+      j = i
+      exit
+   end if
+end do
+
+do i=1,n_strings_beta
+   call ISEQUAL(string_beta,strings_beta(i,:),n_beta,indicator)
+   if (indicator .eqv. .true.) then
+      k = i
+      exit
+   end if
+end do
+string_number = (j-1)*n_strings_beta+k
+end subroutine find_number
 
 
+subroutine creation(orbital,string_spin,n_spin,new_string_spin,sign)
+implicit none
+integer, intent(in) :: orbital,n_spin
+integer, intent(in) :: string_spin(n_spin)
+integer, intent(out) :: new_string_spin(n_spin+1)
+integer, intent(out) :: sign
+integer :: i,j
+logical :: check
+check = .true.
+do i=1,n_spin
+   if (string_spin(i) .eq. orbital) then
+      check = .false.
+      exit
+   end if 
+end do
+if (check .eqv. .true.) then
+   do i=1,n_spin
+   new_string_spin(i+1) = string_spin(i)
+   end do
+   new_string_spin(1) = orbital
+   call sort(new_string_spin,n_spin+1)
+   do j=1,n_spin+1
+      if (new_string_spin(j) .eq. orbital) then
+      sign = (-1)**(j-1)
+      exit
+      end if
+   end do
+else
+   sign = 1
+   new_string_spin(:) = 0
+end if
+end subroutine creation
 
 
 

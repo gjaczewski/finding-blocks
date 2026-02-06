@@ -18,6 +18,7 @@ program new_rel
   integer :: n_rows_alpha, n_rows_beta
   complex, allocatable :: alpha_hamiltonian(:,:), beta_hamiltonian(:,:),alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:),alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
   complex, allocatable :: hopping(:,:), interaction(:,:,:,:),hso(:,:),vector(:),vector_new(:)
+  real, allocatable :: diagonal(:)
   real :: start_time, end_time
   real :: total_time
   call cpu_time(start_time)
@@ -224,10 +225,11 @@ end if
 
 allocate(vector(sizea(1,2)*sizeb(1,2)))
 allocate(vector_new(sizea(1,2)*sizeb(1,2)))
+allocate(diagonal(sizea(1,2)*sizeb(1,2)))
 vector(:) = 1
 vector_new(:) = 0
 call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-
+call generate_diagonal_elements(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,diagonal)
 
 write(*,*) "KONIEC"
 call cpu_time(end_time)
