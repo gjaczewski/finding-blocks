@@ -738,20 +738,21 @@ integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_annihilation_cr
 complex, intent(in) :: hopping(norb,norb), interaction(norb,norb,norb,norb)
 complex, intent(out) :: spin_nr_hamiltonian(n_spin_strings,n_spin_strings)
 integer :: i,j,p,q,r,s, temp_state1,temp_state2,temp_sign1,temp_sign2
+
 do j=1,n_spin_strings
    do q=1,n_spin
       do p=1,norb
          temp_state1 = spin_annihilation_creation_matrix(p,spin_strings(j,q),j,1)
          temp_sign1 = spin_annihilation_creation_matrix(p,spin_strings(j,q),j,2)
          if (temp_state1 .ne. 0) then
-            spin_nr_hamiltonian(temp_state1,j) = spin_nr_hamiltonian(temp_state1,j) + temp_sign1*hopping(p,q)
+            spin_nr_hamiltonian(temp_state1,j) = spin_nr_hamiltonian(temp_state1,j) + temp_sign1*hopping(p,spin_strings(j,q))
             do r=1,norb
-               spin_nr_hamiltonian(temp_state1,j) = spin_nr_hamiltonian(temp_state1,j) + 0.5*temp_sign1*interaction(p,r,q,r)
+               spin_nr_hamiltonian(temp_state1,j) = spin_nr_hamiltonian(temp_state1,j) + 0.5*temp_sign1*interaction(p,r,spin_strings(j,q),r)
                do s=1,n_spin
                   temp_state2 = spin_annihilation_creation_matrix(r,spin_strings(temp_state1,s),temp_state1,1)
                   temp_sign2 = temp_sign1*spin_annihilation_creation_matrix(r,spin_strings(temp_state1,s),temp_state1,2)
                   if (temp_state2 .ne. 0) then
-                     spin_nr_hamiltonian(temp_state2,j) = spin_nr_hamiltonian(temp_state2,j) - 0.5*temp_sign2*interaction(r,p,q,s) 
+                     spin_nr_hamiltonian(temp_state2,j) = spin_nr_hamiltonian(temp_state2,j) - 0.5*temp_sign2*interaction(r,p,spin_strings(j,q),spin_strings(temp_state1,s)) 
                   end if
                end do
             end do

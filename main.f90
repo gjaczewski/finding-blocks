@@ -24,29 +24,41 @@ program new_rel
   call cpu_time(start_time)
   !********* INPUT **********
   verbose = 3
-  relativistic=.true.
-  norb=10
+  relativistic=.false.
+  norb=2
 
-  n_alpha=5
-  n_beta=5
+  n_alpha=1
+  n_beta=1
   
-  n_RAS_spaces_occ=2
-  n_RAS_spaces_virt=2
+  n_RAS_spaces_occ=0
+  n_RAS_spaces_virt=0
 
   allocate(RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt))
 ! number of orbitals cannot be equal 0
 
-  RAS_space_occ(1)=2
-  RAS_space_occ(2)=2
+  !RAS_space_occ(1)=0
+  !RAS_space_occ(2)=0
   active_space=2
-  RAS_space_virt(1)=2
-  RAS_space_virt(2)=2
+  !RAS_space_virt(1)=0
+  !RAS_space_virt(2)=0
 
   
   !***********************
   
   allocate(excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt))
   excit_array(:)=2
+  allocate(hopping(norb,norb))
+  allocate(interaction(norb,norb,norb,norb))
+  hopping(:,:) = 0
+  hopping(1,2) = -1
+  hopping(2,1) = -1
+  interaction(:,:,:,:) = 0
+  interaction(1,1,1,1) = 3
+  interaction(2,2,2,2) = 3
+  if (relativistic .eqv. .true.) then
+    allocate(hso(norb,norb))
+    hso(:,:) = 1
+  end if 
 
   call check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
 
@@ -194,14 +206,7 @@ call fill_annihilation_creation_matrix(n_alpha,sizea(1,2),str_a,norb,alpha_annih
 call fill_annihilation_creation_matrix(n_beta,sizeb(1,2),str_b,norb,beta_annihilation_creation_matrix)
 
 
-allocate(hopping(norb,norb))
-allocate(interaction(norb,norb,norb,norb))
-hopping(:,:) = 1
-interaction(:,:,:,:) = 1
-if (relativistic .eqv. .true.) then
-allocate(hso(norb,norb))
-hso(:,:) = 1
-end if 
+
 
 allocate(alpha_hamiltonian(sizea(1,2),sizea(1,2)))
 allocate(beta_hamiltonian(sizeb(1,2),sizeb(1,2)))
@@ -237,14 +242,18 @@ allocate(diagonal(sizea(1,2)*sizeb(1,2)))
 call generate_diagonal_elements(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,diagonal)
 end if
 
+write(*,*) sizea(1,2)
+write(*,*) alpha_hamiltonian(1,1)
+write(*,*) alpha_hamiltonian(1,2)
+write(*,*) alpha_hamiltonian(2,1)
+write(*,*) alpha_hamiltonian(2,2)
+!write(*,*) beta_hamiltonian
 
-
-
-vector(:) = 1
+vector = [0,0,0,1]
 vector_new(:) = 0
-!call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
-
+call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+!call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+write(*,*) vector_new
 write(*,*) "KONIEC"
 call cpu_time(end_time)
 total_time = end_time - start_time
