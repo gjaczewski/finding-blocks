@@ -7,7 +7,7 @@ program new_rel
   integer, dimension(:,:), allocatable:: RAS_el_array_alpha,RAS_el_array_beta
   logical:: relativistic
   integer ::   NRD_spin_tmp, NRD_spin_alpha, NRD_spin_beta
-  integer :: i, j,k,l,p,q, mu ,nu, temp, n_distributions_alpha,n_distributions_beta, n_distributions_alpha_p1,n_distributions_beta_p1, n_distributions_alpha_m1,n_distributions_beta_m1
+  integer :: i, j, temp, n_distributions_alpha,n_distributions_beta, n_distributions_alpha_p1,n_distributions_beta_p1, n_distributions_alpha_m1,n_distributions_beta_m1
   integer :: max,n_combinations
   integer, allocatable :: all_combinations(:,:)
   integer:: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2),size_tot(3,2)
@@ -15,7 +15,6 @@ program new_rel
   integer, allocatable :: alpha_annihilation_matrix(:,:,:), alpha_annihilation_matrix_p1(:,:,:), beta_annihilation_matrix(:,:,:), beta_annihilation_matrix_p1(:,:,:)
   integer, allocatable :: alpha_annihilation_creation_matrix(:,:,:,:), beta_annihilation_creation_matrix(:,:,:,:),alpha_annihilation_creation_matrix_p1(:,:,:,:), beta_annihilation_creation_matrix_p1(:,:,:,:),alpha_annihilation_creation_matrix_m1(:,:,:,:), beta_annihilation_creation_matrix_m1(:,:,:,:)
   integer :: verbose
-  integer :: n_rows_alpha, n_rows_beta
   complex, allocatable :: alpha_hamiltonian(:,:), beta_hamiltonian(:,:),alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:),alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
   complex, allocatable :: hopping(:,:), interaction(:,:,:,:),hso(:,:),vector(:),vector_new(:)
   real, allocatable :: diagonal(:)
@@ -24,7 +23,7 @@ program new_rel
   call cpu_time(start_time)
   !********* INPUT **********
   verbose = 3
-  relativistic=.false.
+  relativistic=.true.
   norb=2
 
   n_alpha=1
@@ -57,7 +56,10 @@ program new_rel
   interaction(2,2,2,2) = 3
   if (relativistic .eqv. .true.) then
     allocate(hso(norb,norb))
-    hso(:,:) = 1
+    hso(1,1) = 10
+    hso(2,2) = 10
+    hso(1,2) = 15
+    hso(2,1) = 15
   end if 
 
   call check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
@@ -145,17 +147,17 @@ call flush(6)
 
   ! here we generate strings (alpha and beta separately)
   allocate(str_a(sizea(1,2),n_alpha))
-  call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a,verbose)
+  call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a)
 
 
   allocate(str_b(sizeb(1,2),n_beta))
-  call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b,verbose)
+  call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b)
   
   
   if (relativistic .eqv. .true.) then
     if (n_alpha .gt. 1) then
   allocate(str_a_m1(sizea(3,2),n_alpha-1))
-  call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),str_a_m1,verbose)
+  call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),str_a_m1)
   else
   allocate(str_a_m1(sizea(3,2),1))
   str_a_m1(sizea(3,2),:) = 0 !vacuum
@@ -163,22 +165,23 @@ call flush(6)
 
   if (n_beta .gt. 1) then
   allocate(str_b_m1(sizeb(3,2),n_beta-1))
-  call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),str_b_m1,verbose)
+  call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),str_b_m1)
   else
   allocate(str_b_m1(sizeb(3,2),1))
   str_b_m1(sizeb(3,2),:) = 0 !vacuum
   end if
      allocate(str_a_p1(sizea(2,2),n_alpha+1))
-     call fill_spin_strings(n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),str_a_p1,verbose)
+     call fill_spin_strings(n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),str_a_p1)
 
      allocate(str_b_p1(sizeb(2,2),n_beta+1))
-     call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b_p1,verbose)
+     call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b_p1)
 
 !here we generate how annihilation operator acts on states
 allocate(alpha_annihilation_matrix(norb,sizea(1,2),2))
 allocate(beta_annihilation_matrix(norb,sizeb(1,2),2))
 call fill_annihilation_results(sizea(3,2),sizea(1,2),n_alpha,str_a_m1,str_a,norb,alpha_annihilation_matrix)
 call fill_annihilation_results(sizeb(3,2),sizeb(1,2),n_beta,str_b_m1,str_b,norb,beta_annihilation_matrix)
+
 allocate(alpha_annihilation_matrix_p1(norb,sizea(2,2),2))
 allocate(beta_annihilation_matrix_p1(norb,sizeb(2,2),2))
 call fill_annihilation_results(sizea(1,2),sizea(2,2),n_alpha+1,str_a,str_a_p1,norb,alpha_annihilation_matrix_p1)
@@ -242,17 +245,10 @@ allocate(diagonal(sizea(1,2)*sizeb(1,2)))
 call generate_diagonal_elements(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,diagonal)
 end if
 
-write(*,*) sizea(1,2)
-write(*,*) alpha_hamiltonian(1,1)
-write(*,*) alpha_hamiltonian(1,2)
-write(*,*) alpha_hamiltonian(2,1)
-write(*,*) alpha_hamiltonian(2,2)
-!write(*,*) beta_hamiltonian
-
-vector = [0,0,0,1]
+vector = [1,0,0,0,0,0]
 vector_new(:) = 0
-call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-!call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+!call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
 write(*,*) vector_new
 write(*,*) "KONIEC"
 call cpu_time(end_time)

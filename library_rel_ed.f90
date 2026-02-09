@@ -374,7 +374,7 @@ function nCr_dp(n, r) result(c)
   end function nCr_dp
 
 
-  subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s,verbose)
+  subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s)
   
   implicit none
   integer, intent(in):: n_s
@@ -385,7 +385,6 @@ function nCr_dp(n, r) result(c)
   integer, intent(in):: RAS_el_array_spin(NRD_spin,n_RAS_spaces_occ+n_RAS_spaces_virt+1)
   integer, intent(in)::sizes
   integer, intent(inout)::str_s(sizes,n_s)
-  integer, intent(in):: verbose
   integer :: space_sizes(n_RAS_spaces_occ+1+n_RAS_spaces_virt)
   integer, allocatable :: str_temp(:,:)
   integer, allocatable :: another_str_temp(:,:)
@@ -737,7 +736,7 @@ integer, intent(in) :: n_spin_strings,n_spin,norb
 integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_annihilation_creation_matrix(norb,norb,n_spin_strings,2)
 complex, intent(in) :: hopping(norb,norb), interaction(norb,norb,norb,norb)
 complex, intent(out) :: spin_nr_hamiltonian(n_spin_strings,n_spin_strings)
-integer :: i,j,p,q,r,s, temp_state1,temp_state2,temp_sign1,temp_sign2
+integer :: j,p,q,r,s, temp_state1,temp_state2,temp_sign1,temp_sign2
 
 do j=1,n_spin_strings
    do q=1,n_spin
@@ -769,7 +768,7 @@ integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_a
 complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
 complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta)
 complex :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
-integer :: mu,nu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
+integer :: mu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
 new_table(:,:) = 0
 do i=1,n_strings_alpha
    mu = (i-1)*n_strings_beta+1
@@ -828,7 +827,7 @@ complex, intent (in) :: alpha_hamiltonian_m1(n_strings_alpha_m1,n_strings_alpha_
 complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
 complex ::  vector_new_1(n_strings_alpha*n_strings_beta),vector_new_2(n_strings_alpha_p1*n_strings_beta_m1),vector_new_3(n_strings_alpha_m1*n_strings_beta_p1)
 complex :: temp_table1(n_strings_alpha,n_strings_beta), new_table1(n_strings_alpha,n_strings_beta),temp_table2(n_strings_alpha_p1,n_strings_beta_m1), new_table2(n_strings_alpha_p1,n_strings_beta_m1),temp_table3(n_strings_alpha_m1,n_strings_beta_p1), new_table3(n_strings_alpha_m1,n_strings_beta_p1)
-integer :: checker, i,j,k,l,p,q,mu
+integer :: checker, i,j,k,l,p,q,mu, temp_state1, temp_state2, temp_sign1, temp_sign2
 checker = 0
 if (n_alpha-1 .eq. 0) then
 checker = checker + 1
@@ -915,6 +914,7 @@ do i=1,n_strings_alpha_p1
             if (temp_state2 .ne. 0) then
                temp_sign2 = temp_sign1*beta_annihilation_matrix(strings_beta(l,p),l,2)
                new_table2(i,temp_state2) = new_table2(i,temp_state2) + temp_sign2*hso(strings_alpha_p1(i,q),strings_beta(l,p))*temp_table1(temp_state1,l)*(-1)**n_alpha 
+               write(*,*) temp_state1,l,temp_sign2*hso(strings_alpha_p1(i,q),strings_beta(l,p))*temp_table1(temp_state1,l)*(-1)**n_alpha,temp_sign1,temp_sign2/temp_sign1
             end if
          end do
         end do        
@@ -976,16 +976,18 @@ integer, intent (in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_s
 complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_beta), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb)
 real, intent(out) :: diagonal(n_strings_alpha*n_strings_beta)
 integer :: mu,i,j,p,q
+complex :: temp_diagonal(n_strings_alpha*n_strings_beta)
 do mu=1,n_strings_alpha*n_strings_beta
    i = (mu-1)/n_strings_beta+1
    j = mod(mu-1,n_strings_beta)+1
-   diagonal(mu) = alpha_hamiltonian(i,i)+beta_hamiltonian(j,j)
+   temp_diagonal(mu) = alpha_hamiltonian(i,i)+beta_hamiltonian(j,j)
    do p=1,n_alpha
       do q=1,n_beta
-         diagonal(mu) = diagonal(mu) + interaction(strings_alpha(i,p),strings_beta(j,q),strings_alpha(i,p),strings_beta(j,q))
+         temp_diagonal(mu) = temp_diagonal(mu) + interaction(strings_alpha(i,p),strings_beta(j,q),strings_alpha(i,p),strings_beta(j,q))
       end do
    end do
 end do
+diagonal = temp_diagonal
 end subroutine generate_diagonal_elements
 !**********UNUSED, BUT POTENTIALLY USEFUL ROUTINES**************
 
