@@ -688,30 +688,7 @@ end if
 end subroutine fill_annihilation_results
 
 
-subroutine fill_creation_results(n_spin_strings_p1,n_spin_strings,n_spin,spin_strings_p1,spin_strings,norb,spin_creation_matrix)
-implicit none 
-integer, intent(in) :: n_spin_strings_p1,n_spin_strings,n_spin,norb
-integer, intent(in) :: spin_strings_p1(n_spin_strings_p1,n_spin+1), spin_strings(n_spin_strings,n_spin)
-integer, intent(out) :: spin_creation_matrix(norb,n_spin_strings,2)
-integer :: temp_string(n_spin+1)
-integer :: sign, i, j, k
-logical :: indicator
-spin_creation_matrix(:,:,1) = 0
-spin_creation_matrix(:,:,2) = 1
-do i=1,n_spin_strings
-   do j=1,norb
-      call creation(j,spin_strings(i,:),n_spin,temp_string,sign)
-      do k=1,n_spin_strings_p1
-         call ISEQUAL(temp_string,spin_strings_p1(k,:),n_spin+1,indicator)
-         if (indicator .eqv. .true.) then
-            spin_creation_matrix(j,i,1) = k
-            spin_creation_matrix(j,i,2) = sign
-            exit
-         end if
-      end do
-   end do
-end do
-end subroutine fill_creation_results
+
 
 
 !***********************THIS WHOLE PART MIGHT BE OPTIMISED USING SMALL MATRICE**********************
@@ -788,7 +765,7 @@ end subroutine fill_nr_single_spin_hamiltonian
 subroutine nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
 integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_beta), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
+complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
 complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta)
 complex :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
 integer :: mu,nu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
@@ -835,6 +812,161 @@ do i=1,n_strings_alpha
    end do
 end do
 end subroutine nr_matrix_vector_product
+
+
+subroutine rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,strings_alpha,n_strings_alpha,strings_alpha_p1,n_strings_alpha_p1,strings_alpha_m1,n_strings_alpha_m1,n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,strings_beta,n_strings_beta,strings_beta_p1,n_strings_beta_p1,strings_beta_m1,n_strings_beta_m1,n_beta,interaction,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta, n_strings_alpha_p1,n_strings_beta_p1,n_strings_alpha_m1,n_strings_beta_m1
+integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+integer, intent (in) :: alpha_annihilation_creation_matrix_p1(norb,norb,n_strings_alpha_p1,2), beta_annihilation_creation_matrix_p1(norb,norb,n_strings_beta_p1,2), strings_alpha_p1(n_strings_alpha_p1,n_alpha+1), strings_beta_p1(n_strings_beta_p1,n_beta+1)
+integer, intent (in) :: alpha_annihilation_creation_matrix_m1(norb,norb,n_strings_alpha_m1,2), beta_annihilation_creation_matrix_m1(norb,norb,n_strings_beta_m1,2), strings_alpha_m1(n_strings_alpha_m1,n_alpha-1), strings_beta_m1(n_strings_beta_m1,n_beta-1)
+integer, intent (in) :: alpha_annihilation_matrix(norb,n_strings_alpha,2),beta_annihilation_matrix(norb,n_strings_beta,2),alpha_annihilation_matrix_p1(norb,n_strings_alpha_p1,2),beta_annihilation_matrix_p1(norb,n_strings_beta_p1,2)
+integer, intent (in) :: size_tot(3,2)
+complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb),hso(norb,norb),vector(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
+complex, intent (in) :: alpha_hamiltonian_p1(n_strings_alpha_p1,n_strings_alpha_p1), beta_hamiltonian_p1(n_strings_beta_p1,n_strings_beta_p1)
+complex, intent (in) :: alpha_hamiltonian_m1(n_strings_alpha_m1,n_strings_alpha_m1), beta_hamiltonian_m1(n_strings_beta_m1,n_strings_beta_m1)
+complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
+complex ::  vector_new_1(n_strings_alpha*n_strings_beta),vector_new_2(n_strings_alpha_p1*n_strings_beta_m1),vector_new_3(n_strings_alpha_m1*n_strings_beta_p1)
+complex :: temp_table1(n_strings_alpha,n_strings_beta), new_table1(n_strings_alpha,n_strings_beta),temp_table2(n_strings_alpha_p1,n_strings_beta_m1), new_table2(n_strings_alpha_p1,n_strings_beta_m1),temp_table3(n_strings_alpha_m1,n_strings_beta_p1), new_table3(n_strings_alpha_m1,n_strings_beta_p1)
+integer :: checker, i,j,k,l,p,q,mu
+checker = 0
+if (n_alpha-1 .eq. 0) then
+checker = checker + 1
+end if
+if (n_beta-1 .eq. 0) then
+checker = checker + 2
+end if
+!DO WDROZENIA
+call nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector(size_tot(1,1):size_tot(1,2)),vector_new_1)
+call nr_matrix_vector_product(alpha_hamiltonian_p1,strings_alpha_p1,n_strings_alpha_p1,n_alpha+1,beta_hamiltonian_m1,strings_beta_m1,n_strings_beta_m1,n_beta-1,interaction,norb,alpha_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,vector(size_tot(2,1):size_tot(2,2)),vector_new_2)
+call nr_matrix_vector_product(alpha_hamiltonian_m1,strings_alpha_m1,n_strings_alpha_m1,n_alpha-1,beta_hamiltonian_p1,strings_beta_p1,n_strings_beta_p1,n_beta+1,interaction,norb,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix_p1,vector(size_tot(3,1):size_tot(3,2)),vector_new_3)
+
+new_table1(:,:) = 0
+new_table2(:,:) = 0
+new_table3(:,:) = 0
+do i=1,n_strings_alpha
+   mu = (i-1)*n_strings_beta+1
+   do j=1,n_strings_beta
+      temp_table1(i,j) = vector(mu)
+      mu = mu + 1
+   end do
+end do
+
+do i=1,n_strings_alpha_p1
+   mu = (i-1)*n_strings_beta_m1+size_tot(2,1)
+   do j=1,n_strings_beta_m1
+      temp_table2(i,j) = vector(mu)
+      mu = mu + 1
+   end do
+end do
+
+do i=1,n_strings_alpha_m1
+   mu = (i-1)*n_strings_beta_p1+size_tot(3,1)
+   do j=1,n_strings_beta_p1
+      temp_table3(i,j) = vector(mu)
+      mu = mu + 1
+   end do
+end do
+
+do j=1,n_strings_beta
+      do p=1,n_beta
+         temp_state1 = beta_annihilation_matrix(strings_beta(j,p),j,1)
+         if (temp_state1 .ne. 0) then
+            temp_sign1 = beta_annihilation_matrix(strings_beta(j,p),j,2)
+            do k=1,n_strings_alpha_p1
+               do q=1,n_alpha+1
+                  temp_state2 = alpha_annihilation_matrix_p1(strings_alpha_p1(k,q),k,1)
+                  if (temp_state2 .ne. 0) then
+                     temp_sign2 = temp_sign1 * alpha_annihilation_matrix_p1(strings_alpha_p1(k,q),k,2)
+                     new_table1(temp_state2,j) = new_table1(temp_state2,j) +  temp_sign2*hso(strings_beta(j,p),strings_alpha_p1(k,q))*temp_table2(k,temp_state1)*(-1)**n_alpha
+                  end if
+               end do
+            end do
+         end if
+      end do
+end do
+
+do i=1,n_strings_alpha
+   do q=1,n_alpha
+      temp_state1 = alpha_annihilation_matrix(strings_alpha(i,q),i,1) 
+      if (temp_state1 .ne. 0) then
+         temp_sign1 = alpha_annihilation_matrix(strings_alpha(i,q),i,2)
+         do l=1,n_strings_beta_p1
+            do p=1,n_beta+1
+               temp_state2 = beta_annihilation_matrix_p1(strings_beta_p1(l,p),l,1)
+               if (temp_state2 .ne. 0) then
+                  temp_sign2 = temp_sign1*beta_annihilation_matrix_p1(strings_beta_p1(l,p),l,2)
+                  new_table1(i,temp_state2) = new_table1(i,temp_state2) + temp_sign2*hso(strings_alpha(i,q),strings_beta_p1(l,p))*temp_table3(temp_state1,l)*(-1)**(n_alpha-1)
+               end if
+            end do
+         end do 
+      end if     
+   end do
+end do
+
+do i=1,n_strings_alpha_p1
+   do q=1,n_alpha+1
+      temp_state1 = alpha_annihilation_matrix_p1(strings_alpha_p1(i,q),i,1)
+      if (temp_state1 .ne. 0) then
+        temp_sign1 = alpha_annihilation_matrix_p1(strings_alpha_p1(i,q),i,2)
+        do l=1,n_strings_beta
+         do p=1,n_beta
+            temp_state2 = beta_annihilation_matrix(strings_beta(l,p),l,1)
+            if (temp_state2 .ne. 0) then
+               temp_sign2 = temp_sign1*beta_annihilation_matrix(strings_beta(l,p),l,2)
+               new_table2(i,temp_state2) = new_table2(i,temp_state2) + temp_sign2*hso(strings_alpha_p1(i,q),strings_beta(l,p))*temp_table1(temp_state1,l)*(-1)**n_alpha 
+            end if
+         end do
+        end do        
+      end if
+   end do
+end do
+
+do j=1,n_strings_beta_p1
+   do p=1,n_beta+1
+      temp_state1 = beta_annihilation_matrix_p1(strings_beta_p1(j,p),j,1)
+      if (temp_state1 .ne. 0) then
+         temp_sign1 = beta_annihilation_matrix_p1(strings_beta_p1(j,p),j,2)
+         do k=1,n_strings_alpha
+            do q=1,n_alpha
+               temp_state2 = alpha_annihilation_matrix(strings_alpha(k,q),k,1)
+               if (temp_state2 .ne. 0) then
+                  temp_sign2 = temp_sign1*alpha_annihilation_matrix(strings_alpha(k,q),k,2)
+                  new_table3(temp_state2,j) = new_table3(temp_state2,j) + temp_sign2*hso(strings_beta_p1(j,p),strings_alpha(k,q))*temp_table1(k,temp_state1)*(-1)**(n_alpha-1)
+               end if
+            end do
+         end do
+      end if
+   end do
+end do
+
+do i=1,n_strings_alpha
+   mu = (i-1)*n_strings_beta+1
+   do j=1,n_strings_beta
+      vector_new_1(mu) = vector_new_1(mu) + new_table1(i,j)
+      mu = mu + 1
+   end do
+end do
+
+do i=1,n_strings_alpha_p1
+   mu = (i-1)*n_strings_beta_m1+1
+   do j=1,n_strings_beta_m1
+      vector_new_2(mu) = vector_new_2(mu) + new_table2(i,j)
+      mu = mu + 1
+   end do
+end do
+
+do i=1,n_strings_alpha_m1
+   mu = (i-1)*n_strings_beta_p1+1
+   do j=1,n_strings_beta_p1
+      vector_new_3(mu) = vector_new_3(mu) + new_table3(i,j)
+      mu = mu + 1
+   end do
+end do
+vector_new(1:size_tot(1,2)) = vector_new_1(:)
+vector_new(size_tot(2,1):size_tot(3,1)-1) = vector_new_2(:)
+vector_new(size_tot(3,1):size_tot(1,2)+size_tot(2,2)+size_tot(3,2)) = vector_new_3(:)
+
+end subroutine rel_matrix_vector_product
 
 
 subroutine generate_diagonal_elements(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,diagonal)
@@ -936,9 +1068,30 @@ end if
 end subroutine creation
 
 
-
-
-
+subroutine fill_creation_results(n_spin_strings_p1,n_spin_strings,n_spin,spin_strings_p1,spin_strings,norb,spin_creation_matrix)
+implicit none 
+integer, intent(in) :: n_spin_strings_p1,n_spin_strings,n_spin,norb
+integer, intent(in) :: spin_strings_p1(n_spin_strings_p1,n_spin+1), spin_strings(n_spin_strings,n_spin)
+integer, intent(out) :: spin_creation_matrix(norb,n_spin_strings,2)
+integer :: temp_string(n_spin+1)
+integer :: sign, i, j, k
+logical :: indicator
+spin_creation_matrix(:,:,1) = 0
+spin_creation_matrix(:,:,2) = 1
+do i=1,n_spin_strings
+   do j=1,norb
+      call creation(j,spin_strings(i,:),n_spin,temp_string,sign)
+      do k=1,n_spin_strings_p1
+         call ISEQUAL(temp_string,spin_strings_p1(k,:),n_spin+1,indicator)
+         if (indicator .eqv. .true.) then
+            spin_creation_matrix(j,i,1) = k
+            spin_creation_matrix(j,i,2) = sign
+            exit
+         end if
+      end do
+   end do
+end do
+end subroutine fill_creation_results
 
 
 
