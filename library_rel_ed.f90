@@ -762,10 +762,10 @@ end do
 end subroutine fill_nr_single_spin_hamiltonian
 
 
-subroutine nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+subroutine nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
 integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
+complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
 complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta)
 complex :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
 integer :: mu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
@@ -795,7 +795,7 @@ do i=1,n_strings_alpha
                      temp_state2 = beta_annihilation_creation_matrix(s,strings_beta(j,q),j,1)
                      if (temp_state2 .ne. 0) then
                         temp_sign2 = temp_sign1*beta_annihilation_creation_matrix(s,strings_beta(j,q),j,2)
-                        new_table(i,j) = new_table(i,j) + temp_sign2*temp_table(temp_state1,temp_state2)*interaction(strings_alpha(i,p),strings_beta(j,q),r,s)
+                        new_table(i,j) = new_table(i,j) + temp_sign2*temp_table(temp_state1,temp_state2)*interaction_mix(strings_alpha(i,p),strings_beta(j,q),r,s)
                      end if 
                   end do
                end do   
@@ -814,14 +814,14 @@ end do
 end subroutine nr_matrix_vector_product
 
 
-subroutine rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,strings_alpha,n_strings_alpha,strings_alpha_p1,n_strings_alpha_p1,strings_alpha_m1,n_strings_alpha_m1,n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,strings_beta,n_strings_beta,strings_beta_p1,n_strings_beta_p1,strings_beta_m1,n_strings_beta_m1,n_beta,interaction,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+subroutine rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,strings_alpha,n_strings_alpha,strings_alpha_p1,n_strings_alpha_p1,strings_alpha_m1,n_strings_alpha_m1,n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,strings_beta,n_strings_beta,strings_beta_p1,n_strings_beta_p1,strings_beta_m1,n_strings_beta_m1,n_beta,interaction_mix,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta, n_strings_alpha_p1,n_strings_beta_p1,n_strings_alpha_m1,n_strings_beta_m1
 integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
 integer, intent (in) :: alpha_annihilation_creation_matrix_p1(norb,norb,n_strings_alpha_p1,2), beta_annihilation_creation_matrix_p1(norb,norb,n_strings_beta_p1,2), strings_alpha_p1(n_strings_alpha_p1,n_alpha+1), strings_beta_p1(n_strings_beta_p1,n_beta+1)
 integer, intent (in) :: alpha_annihilation_creation_matrix_m1(norb,norb,n_strings_alpha_m1,2), beta_annihilation_creation_matrix_m1(norb,norb,n_strings_beta_m1,2), strings_alpha_m1(n_strings_alpha_m1,n_alpha-1), strings_beta_m1(n_strings_beta_m1,n_beta-1)
 integer, intent (in) :: alpha_annihilation_matrix(norb,n_strings_alpha,2),beta_annihilation_matrix(norb,n_strings_beta,2),alpha_annihilation_matrix_p1(norb,n_strings_alpha_p1,2),beta_annihilation_matrix_p1(norb,n_strings_beta_p1,2)
 integer, intent (in) :: size_tot(3,2)
-complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb),hso(norb,norb),vector(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
+complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb),hso(norb,norb),vector(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
 complex, intent (in) :: alpha_hamiltonian_p1(n_strings_alpha_p1,n_strings_alpha_p1), beta_hamiltonian_p1(n_strings_beta_p1,n_strings_beta_p1)
 complex, intent (in) :: alpha_hamiltonian_m1(n_strings_alpha_m1,n_strings_alpha_m1), beta_hamiltonian_m1(n_strings_beta_m1,n_strings_beta_m1)
 complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
@@ -836,9 +836,9 @@ if (n_beta-1 .eq. 0) then
 checker = checker + 2
 end if
 !DO WDROZENIA
-call nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector(size_tot(1,1):size_tot(1,2)),vector_new_1)
-call nr_matrix_vector_product(alpha_hamiltonian_p1,strings_alpha_p1,n_strings_alpha_p1,n_alpha+1,beta_hamiltonian_m1,strings_beta_m1,n_strings_beta_m1,n_beta-1,interaction,norb,alpha_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,vector(size_tot(2,1):size_tot(2,2)),vector_new_2)
-call nr_matrix_vector_product(alpha_hamiltonian_m1,strings_alpha_m1,n_strings_alpha_m1,n_alpha-1,beta_hamiltonian_p1,strings_beta_p1,n_strings_beta_p1,n_beta+1,interaction,norb,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix_p1,vector(size_tot(3,1):size_tot(3,2)),vector_new_3)
+call nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector(size_tot(1,1):size_tot(1,2)),vector_new_1)
+call nr_matrix_vector_product(alpha_hamiltonian_p1,strings_alpha_p1,n_strings_alpha_p1,n_alpha+1,beta_hamiltonian_m1,strings_beta_m1,n_strings_beta_m1,n_beta-1,interaction_mix,norb,alpha_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,vector(size_tot(2,1):size_tot(2,2)),vector_new_2)
+call nr_matrix_vector_product(alpha_hamiltonian_m1,strings_alpha_m1,n_strings_alpha_m1,n_alpha-1,beta_hamiltonian_p1,strings_beta_p1,n_strings_beta_p1,n_beta+1,interaction_mix,norb,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix_p1,vector(size_tot(3,1):size_tot(3,2)),vector_new_3)
 
 new_table1(:,:) = 0
 new_table2(:,:) = 0
@@ -914,7 +914,6 @@ do i=1,n_strings_alpha_p1
             if (temp_state2 .ne. 0) then
                temp_sign2 = temp_sign1*beta_annihilation_matrix(strings_beta(l,p),l,2)
                new_table2(i,temp_state2) = new_table2(i,temp_state2) + temp_sign2*hso(strings_alpha_p1(i,q),strings_beta(l,p))*temp_table1(temp_state1,l)*(-1)**n_alpha 
-               write(*,*) temp_state1,l,temp_sign2*hso(strings_alpha_p1(i,q),strings_beta(l,p))*temp_table1(temp_state1,l)*(-1)**n_alpha,temp_sign1,temp_sign2/temp_sign1
             end if
          end do
         end do        

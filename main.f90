@@ -16,7 +16,7 @@ program new_rel
   integer, allocatable :: alpha_annihilation_creation_matrix(:,:,:,:), beta_annihilation_creation_matrix(:,:,:,:),alpha_annihilation_creation_matrix_p1(:,:,:,:), beta_annihilation_creation_matrix_p1(:,:,:,:),alpha_annihilation_creation_matrix_m1(:,:,:,:), beta_annihilation_creation_matrix_m1(:,:,:,:)
   integer :: verbose
   complex, allocatable :: alpha_hamiltonian(:,:), beta_hamiltonian(:,:),alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:),alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
-  complex, allocatable :: hopping(:,:), interaction(:,:,:,:),hso(:,:),vector(:),vector_new(:)
+  complex, allocatable :: hopping_alpha(:,:),hopping_beta(:,:), interaction_mix(:,:,:,:),interaction_alpha(:,:,:,:),interaction_beta(:,:,:,:),hso(:,:),vector(:),vector_new(:)
   real, allocatable :: diagonal(:)
   real :: start_time, end_time
   real :: total_time
@@ -46,14 +46,20 @@ program new_rel
   
   allocate(excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt))
   excit_array(:)=2
-  allocate(hopping(norb,norb))
-  allocate(interaction(norb,norb,norb,norb))
-  hopping(:,:) = 0
-  hopping(1,2) = -1
-  hopping(2,1) = -1
-  interaction(:,:,:,:) = 0
-  interaction(1,1,1,1) = 3
-  interaction(2,2,2,2) = 3
+  allocate(hopping_alpha(norb,norb))
+  allocate(hopping_beta(norb,norb))
+  allocate(interaction_mix(norb,norb,norb,norb))
+  allocate(interaction_alpha(norb,norb,norb,norb))
+  allocate(interaction_beta(norb,norb,norb,norb))
+  hopping_alpha(:,:) = 0
+  hopping_alpha(1,2) = -1
+  hopping_alpha(2,1) = -1
+  hopping_beta = hopping_alpha
+  interaction_mix(:,:,:,:) = 0
+  interaction_alpha(:,:,:,:) = 0
+  interaction_beta(:,:,:,:) = 0
+  interaction_mix(1,1,1,1) = 3
+  interaction_mix(2,2,2,2) = 3
   if (relativistic .eqv. .true.) then
     allocate(hso(norb,norb))
     hso(1,1) = 10
@@ -214,41 +220,41 @@ call fill_annihilation_creation_matrix(n_beta,sizeb(1,2),str_b,norb,beta_annihil
 allocate(alpha_hamiltonian(sizea(1,2),sizea(1,2)))
 allocate(beta_hamiltonian(sizeb(1,2),sizeb(1,2)))
 
-call fill_nr_single_spin_hamiltonian(str_a,sizea(1,2),n_alpha,norb,hopping,interaction,alpha_annihilation_creation_matrix,alpha_hamiltonian)
-call fill_nr_single_spin_hamiltonian(str_b,sizeb(1,2),n_beta,norb,hopping,interaction,beta_annihilation_creation_matrix,beta_hamiltonian)
+call fill_nr_single_spin_hamiltonian(str_a,sizea(1,2),n_alpha,norb,hopping_alpha,interaction_alpha,alpha_annihilation_creation_matrix,alpha_hamiltonian)
+call fill_nr_single_spin_hamiltonian(str_b,sizeb(1,2),n_beta,norb,hopping_beta,interaction_beta,beta_annihilation_creation_matrix,beta_hamiltonian)
 
 if (relativistic .eqv. .true.) then
 allocate(alpha_hamiltonian_p1(sizea(2,2),sizea(2,2)))
 allocate(beta_hamiltonian_p1(sizeb(2,2),sizeb(2,2)))
 
-call fill_nr_single_spin_hamiltonian(str_a_p1,sizea(2,2),n_alpha+1,norb,hopping,interaction,alpha_annihilation_creation_matrix_p1,alpha_hamiltonian_p1)
-call fill_nr_single_spin_hamiltonian(str_b_p1,sizeb(2,2),n_beta+1,norb,hopping,interaction,beta_annihilation_creation_matrix_p1,beta_hamiltonian_p1)
+call fill_nr_single_spin_hamiltonian(str_a_p1,sizea(2,2),n_alpha+1,norb,hopping_alpha,interaction_alpha,alpha_annihilation_creation_matrix_p1,alpha_hamiltonian_p1)
+call fill_nr_single_spin_hamiltonian(str_b_p1,sizeb(2,2),n_beta+1,norb,hopping_beta,interaction_beta,beta_annihilation_creation_matrix_p1,beta_hamiltonian_p1)
 
 allocate(alpha_hamiltonian_m1(sizea(3,2),sizea(3,2)))
 allocate(beta_hamiltonian_m1(sizeb(3,2),sizeb(3,2)))
 
-call fill_nr_single_spin_hamiltonian(str_a_m1,sizea(3,2),n_alpha-1,norb,hopping,interaction,alpha_annihilation_creation_matrix_m1,alpha_hamiltonian_m1)
-call fill_nr_single_spin_hamiltonian(str_b_m1,sizeb(3,2),n_beta-1,norb,hopping,interaction,beta_annihilation_creation_matrix_m1,beta_hamiltonian_m1)
+call fill_nr_single_spin_hamiltonian(str_a_m1,sizea(3,2),n_alpha-1,norb,hopping_alpha,interaction_alpha,alpha_annihilation_creation_matrix_m1,alpha_hamiltonian_m1)
+call fill_nr_single_spin_hamiltonian(str_b_m1,sizeb(3,2),n_beta-1,norb,hopping_beta,interaction_beta,beta_annihilation_creation_matrix_m1,beta_hamiltonian_m1)
 end if
 
 if (relativistic .eqv. .true.) then
 allocate(vector(size_tot(1,2)+size_tot(2,2)+size_tot(3,2)))
 allocate(vector_new(size_tot(1,2)+size_tot(2,2)+size_tot(3,2)))
 allocate(diagonal(size_tot(1,2)+size_tot(2,2)+size_tot(3,2)))
-call generate_diagonal_elements(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,diagonal(1:size_tot(1,2)))
-call generate_diagonal_elements(alpha_hamiltonian_p1,str_a_p1,sizea(2,2),n_alpha+1,beta_hamiltonian_m1,str_b_m1,sizeb(3,2),n_beta-1,interaction,norb,diagonal(size_tot(2,1):size_tot(2,2)+size_tot(1,2)))
-call generate_diagonal_elements(alpha_hamiltonian_m1,str_a_m1,sizea(3,2),n_alpha-1,beta_hamiltonian_p1,str_b_p1,sizeb(2,2),n_beta+1,interaction,norb,diagonal(size_tot(3,1):size_tot(3,2)+size_tot(2,2)+size_tot(1,2)))
+call generate_diagonal_elements(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction_mix,norb,diagonal(1:size_tot(1,2)))
+call generate_diagonal_elements(alpha_hamiltonian_p1,str_a_p1,sizea(2,2),n_alpha+1,beta_hamiltonian_m1,str_b_m1,sizeb(3,2),n_beta-1,interaction_mix,norb,diagonal(size_tot(2,1):size_tot(2,2)+size_tot(1,2)))
+call generate_diagonal_elements(alpha_hamiltonian_m1,str_a_m1,sizea(3,2),n_alpha-1,beta_hamiltonian_p1,str_b_p1,sizeb(2,2),n_beta+1,interaction_mix,norb,diagonal(size_tot(3,1):size_tot(3,2)+size_tot(2,2)+size_tot(1,2)))
 else
 allocate(vector(sizea(1,2)*sizeb(1,2)))
 allocate(vector_new(sizea(1,2)*sizeb(1,2)))
 allocate(diagonal(sizea(1,2)*sizeb(1,2)))
-call generate_diagonal_elements(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,diagonal)
+call generate_diagonal_elements(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction_mix,norb,diagonal)
 end if
 
-vector = [1,0,0,0,0,0]
+vector = [0,0,0,0,1,0]
 vector_new(:) = 0
-!call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+!call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction_mix,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
 write(*,*) vector_new
 write(*,*) "KONIEC"
 call cpu_time(end_time)
