@@ -877,7 +877,7 @@ do j=1,n_strings_beta
                   temp_state2 = alpha_annihilation_matrix_p1(strings_alpha_p1(k,q),k,1)
                   if (temp_state2 .ne. 0) then
                      temp_sign2 = temp_sign1 * alpha_annihilation_matrix_p1(strings_alpha_p1(k,q),k,2)
-                     new_table1(temp_state2,j) = new_table1(temp_state2,j) +  temp_sign2*hso(strings_beta(j,p),strings_alpha_p1(k,q))*temp_table2(k,temp_state1)*(-1)**n_alpha
+                     new_table1(temp_state2,j) = new_table1(temp_state2,j) +  temp_sign2*conjg(hso(strings_alpha_p1(k,q),strings_beta(j,p)))*temp_table2(k,temp_state1)*(-1)**n_alpha
                   end if
                end do
             end do
@@ -931,7 +931,7 @@ do j=1,n_strings_beta_p1
                temp_state2 = alpha_annihilation_matrix(strings_alpha(k,q),k,1)
                if (temp_state2 .ne. 0) then
                   temp_sign2 = temp_sign1*alpha_annihilation_matrix(strings_alpha(k,q),k,2)
-                  new_table3(temp_state2,j) = new_table3(temp_state2,j) + temp_sign2*hso(strings_beta_p1(j,p),strings_alpha(k,q))*temp_table1(k,temp_state1)*(-1)**(n_alpha-1)
+                  new_table3(temp_state2,j) = new_table3(temp_state2,j) + temp_sign2*conjg(hso(strings_alpha(k,q),strings_beta_p1(j,p)))*temp_table1(k,temp_state1)*(-1)**(n_alpha-1)
                end if
             end do
          end do
