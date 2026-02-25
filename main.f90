@@ -26,8 +26,8 @@ program new_rel
   relativistic=.true.
   norb=2
 
-  n_alpha=1
-  n_beta=1
+  n_alpha=2
+  n_beta=0
   
   n_RAS_spaces_occ=0
   n_RAS_spaces_virt=0
@@ -45,7 +45,7 @@ program new_rel
   !***********************
   
   allocate(excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt))
-  excit_array(:)=2
+  excit_array(:)=1
   allocate(hopping_alpha(norb,norb))
   allocate(hopping_beta(norb,norb))
   allocate(interaction_mix(norb,norb,norb,norb))
@@ -107,7 +107,7 @@ do i=1,n_combinations
 end do
 
 
-! here we calculate number of possible distributions NRD_spin_alpha, NRD_spin_beta and number of distribution for fixed spin
+! here we calculate number of possible distributions NRD_spin_alpha, NRD_spin_beta and number of distributions for fixed spin
 call count_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta)
 
 
@@ -128,12 +128,12 @@ write(*,*) NRDa(2,:)
 write(*,*) NRDa(3,:)
 
 write(*,*) "NRDb: "
-write(*,*) NRDa(1,:)
-write(*,*) NRDa(2,:)
-write(*,*) NRDa(3,:)
+write(*,*) NRDb(1,:)
+write(*,*) NRDb(2,:)
+write(*,*) NRDb(3,:)
 
 ! here we calculate sizea(3,2),sizeb(3,2),size_tot(3,2) 
-  call calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
+call calculate_space_size(NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa,NRDb,sizea,sizeb,size_tot,verbose)
 write(*,*) "Space size alpha: ", sizea(1,2), sizea(2,2), sizea(3,2)
 write(*,*) "Space size beta: ", sizeb(1,2), sizeb(2,2), sizeb(3,2)
 write(*,*) "Total size:"
@@ -152,57 +152,112 @@ call flush(6)
   !size_tot(:,2) - the size (number of elements) of/in such sector
 
   ! here we generate strings (alpha and beta separately)
+  if (size_tot(1,2) .eq. 0) then
+    write(*,*) "MAIN BLOCK IS EMPTY"
+    write(*,*) "QUITTING THE PROGRAM"
+    !SHOULD WE INLCUDE VACUUM?
+    stop
+  else if ((relativistic .eqv. .true.) .and. (size_tot(2,2)+size_tot(3,2) .eq. 0)) then
+    write(*,*) "RELATIVISTIC BLOCKS ARE EMPTY"
+    write(*,*) "QUITTING THE PROGRAM"
+    stop
+  end if
+
+  if (n_alpha .gt. 0)  then
   allocate(str_a(sizea(1,2),n_alpha))
   call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),str_a)
+  else if (n_alpha .eq. 0)  then
+  allocate(str_a(sizea(1,2),1))
+  str_a(sizea(1,2),:) = 0 !vacuum  
+  end if
+  
 
-
+  
+  if (n_beta .gt. 0) then
   allocate(str_b(sizeb(1,2),n_beta))
   call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b)
-  
-  
-  if (relativistic .eqv. .true.) then
-    if (n_alpha .gt. 1) then
-  allocate(str_a_m1(sizea(3,2),n_alpha-1))
-  call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),str_a_m1)
-  else
-  allocate(str_a_m1(sizea(3,2),1))
-  str_a_m1(sizea(3,2),:) = 0 !vacuum
+  else if  (n_beta .eq. 0)  then
+  allocate(str_b(sizeb(1,2),1))
+  str_b(sizeb(1,2),:) = 0 !vacuum  
   end if
+ 
 
-  if (n_beta .gt. 1) then
-  allocate(str_b_m1(sizeb(3,2),n_beta-1))
-  call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),str_b_m1)
-  else
-  allocate(str_b_m1(sizeb(3,2),1))
-  str_b_m1(sizeb(3,2),:) = 0 !vacuum
-  end if
+
+  if (relativistic .eqv. .true.) then
+    if (sizea(3,2) .ne. 0) then
+      if (n_alpha .gt. 1) then
+        allocate(str_a_m1(sizea(3,2),n_alpha-1))
+        call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),str_a_m1)
+      else if (n_alpha .eq. 1) then
+        allocate(str_a_m1(sizea(3,2),1))
+        str_a_m1(sizea(3,2),:) = 0 !vacuum
+      end if
+      
+      allocate(alpha_annihilation_matrix(norb,sizea(1,2),2))
+      call fill_annihilation_results(sizea(3,2),sizea(1,2),n_alpha,str_a_m1,str_a,norb,alpha_annihilation_matrix)
+
+      allocate(alpha_annihilation_creation_matrix_m1(norb,norb,sizea(3,2),2))
+      call fill_annihilation_creation_matrix(n_alpha-1,sizea(3,2),str_a_m1,norb,alpha_annihilation_creation_matrix_m1)
+    end if
+
+
+
+    if (sizeb(3,2) .ne. 0) then
+      if (n_beta .gt. 1) then
+        allocate(str_b_m1(sizeb(3,2),n_beta-1))
+        call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),str_b_m1)
+      else if (n_beta .eq. 1) then
+        allocate(str_b_m1(sizeb(3,2),1))
+        str_b_m1(sizeb(3,2),:) = 0 !vacuum
+      end if
+      
+      allocate(beta_annihilation_matrix(norb,sizeb(1,2),2))
+      call fill_annihilation_results(sizeb(3,2),sizeb(1,2),n_beta,str_b_m1,str_b,norb,beta_annihilation_matrix)
+
+      allocate(beta_annihilation_creation_matrix_m1(norb,norb,sizeb(3,2),2))
+      call fill_annihilation_creation_matrix(n_beta-1,sizeb(3,2),str_b_m1,norb,beta_annihilation_creation_matrix_m1)
+    end if
+
+!TUTAJ BLOKI +1
+  
+
+    if (sizea(2,2) .ne. 0) then
+     
      allocate(str_a_p1(sizea(2,2),n_alpha+1))
      call fill_spin_strings(n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),str_a_p1)
+     
+     allocate(alpha_annihilation_matrix_p1(norb,sizea(2,2),2))
+     call fill_annihilation_results(sizea(1,2),sizea(2,2),n_alpha+1,str_a,str_a_p1,norb,alpha_annihilation_matrix_p1)
 
+     allocate(alpha_annihilation_creation_matrix_p1(norb,norb,sizea(2,2),2))
+     call fill_annihilation_creation_matrix(n_alpha+1,sizea(2,2),str_a_p1,norb,alpha_annihilation_creation_matrix_p1)
+
+    end if
+    if (sizeb(2,2) .ne. 0) then
+     
      allocate(str_b_p1(sizeb(2,2),n_beta+1))
      call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),str_b_p1)
+     
+     allocate(beta_annihilation_matrix_p1(norb,sizeb(2,2),2))
+     call fill_annihilation_results(sizeb(1,2),sizeb(2,2),n_beta+1,str_b,str_b_p1,norb,beta_annihilation_matrix_p1)
+    end if
 
-!here we generate how annihilation operator acts on states
-allocate(alpha_annihilation_matrix(norb,sizea(1,2),2))
-allocate(beta_annihilation_matrix(norb,sizeb(1,2),2))
-call fill_annihilation_results(sizea(3,2),sizea(1,2),n_alpha,str_a_m1,str_a,norb,alpha_annihilation_matrix)
-call fill_annihilation_results(sizeb(3,2),sizeb(1,2),n_beta,str_b_m1,str_b,norb,beta_annihilation_matrix)
 
-allocate(alpha_annihilation_matrix_p1(norb,sizea(2,2),2))
-allocate(beta_annihilation_matrix_p1(norb,sizeb(2,2),2))
-call fill_annihilation_results(sizea(1,2),sizea(2,2),n_alpha+1,str_a,str_a_p1,norb,alpha_annihilation_matrix_p1)
-call fill_annihilation_results(sizeb(1,2),sizeb(2,2),n_beta+1,str_b,str_b_p1,norb,beta_annihilation_matrix_p1)
+
+
+
+
 !here we generate how pair of operators acts on states (REL)
-allocate(alpha_annihilation_creation_matrix_p1(norb,norb,sizea(2,2),2))
+
 allocate(beta_annihilation_creation_matrix_p1(norb,norb,sizeb(2,2),2))
 
-allocate(alpha_annihilation_creation_matrix_m1(norb,norb,sizea(3,2),2))
+
 allocate(beta_annihilation_creation_matrix_m1(norb,norb,sizeb(3,2),2))
 
-call fill_annihilation_creation_matrix(n_alpha+1,sizea(2,2),str_a_p1,norb,alpha_annihilation_creation_matrix_p1)
+
 call fill_annihilation_creation_matrix(n_beta+1,sizeb(2,2),str_b_p1,norb,beta_annihilation_creation_matrix_p1)
 
-call fill_annihilation_creation_matrix(n_alpha-1,sizea(3,2),str_a_m1,norb,alpha_annihilation_creation_matrix_m1)
+
 call fill_annihilation_creation_matrix(n_beta-1,sizeb(3,2),str_b_m1,norb,beta_annihilation_creation_matrix_m1)
 end if
 
@@ -254,7 +309,7 @@ end if
 vector = [0,0,0,0,1,0]
 vector_new(:) = 0
 !call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction_mix,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+!call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction_mix,hso,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
 write(*,*) vector_new
 write(*,*) "KONIEC"
 call cpu_time(end_time)

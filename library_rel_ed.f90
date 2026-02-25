@@ -87,7 +87,7 @@ integer ::i,j
 integer, intent(in) :: n_combinations,n_spaces
 integer, intent(in) :: all_combinations(n_combinations,n_spaces)
 integer :: a,v,r, counter, sum, checker
-integer, intent(out) :: n_distributions
+integer, intent(inout) :: n_distributions
 a = n_RAS_spaces_occ + 1
 counter = 0
 do i=1,n_combinations
@@ -185,33 +185,19 @@ integer, intent(in) :: all_combinations(n_combinations,n_spaces)
 integer, intent(out) :: n_distributions_alpha,n_distributions_beta
 integer, intent(out) :: n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1
 integer, intent(out) :: NRD_spin_alpha,NRD_spin_beta
-
+n_distributions_alpha_p1 = 0    
+n_distributions_beta_p1 = 0
+n_distributions_alpha_m1 = 0    
+n_distributions_beta_m1 = 0
 call count_distributions(n_alpha, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha)
 call count_distributions(n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta)
-  if (n_alpha .le. 0) then
-    n_distributions_alpha_m1 = 0
-
-  else
-    call count_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1)
-  end if
-    if (n_beta .le. 0) then
-    n_distributions_beta_m1 = 0
-
-    else
-    call count_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1)
-
-  end if
 if (relativistic .eqv. .true.) then
-  
+  call count_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1)
+  call count_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1)
 
-      call count_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1)
-      call count_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1)
-      
-else 
-    n_distributions_alpha_p1 = 0    
-    n_distributions_beta_p1 = 0
+  call count_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1)
+  call count_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1)
 end if 
-
 
 NRD_spin_alpha = n_distributions_alpha + n_distributions_alpha_m1 + n_distributions_alpha_p1
 NRD_spin_beta= n_distributions_beta + n_distributions_beta_m1 + n_distributions_beta_p1
@@ -248,17 +234,15 @@ NRDb(2,2) = n_distributions_beta + n_distributions_beta_p1
 
 NRDb(3,1) = n_distributions_beta + n_distributions_beta_p1 + 1
 NRDb(3,2) = n_distributions_beta + n_distributions_beta_p1 + n_distributions_beta_m1
+
 call find_distributions(n_alpha, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,RAS_el_array_alpha(1:n_distributions_alpha,:))
 call find_distributions(n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta,RAS_el_array_beta(1:n_distributions_beta,:))
-if (n_alpha .gt. 0) then
-call find_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1,RAS_el_array_alpha(n_distributions_alpha+n_distributions_alpha_p1+1:n_distributions_alpha_m1+n_distributions_alpha+n_distributions_alpha_p1,:))
-end if
-if (n_beta .gt. 0) then
-call find_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1,RAS_el_array_beta(n_distributions_beta+n_distributions_beta_p1+1:n_distributions_beta_m1+n_distributions_beta+n_distributions_beta_p1,:))
-end if
+
 if (relativistic .eqv. .true.) then
 call find_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1,RAS_el_array_alpha(n_distributions_alpha+1:n_distributions_alpha+n_distributions_alpha_p1,:))
 call find_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1,RAS_el_array_beta(n_distributions_beta+1:n_distributions_beta+n_distributions_beta_p1,:))
+call find_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1,RAS_el_array_alpha(n_distributions_alpha+n_distributions_alpha_p1+1:n_distributions_alpha_m1+n_distributions_alpha+n_distributions_alpha_p1,:))
+call find_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1,RAS_el_array_beta(n_distributions_beta+n_distributions_beta_p1+1:n_distributions_beta_m1+n_distributions_beta+n_distributions_beta_p1,:))
 end if
 
 end subroutine find_spin_distributions
@@ -659,7 +643,7 @@ subroutine fill_annihilation_results(n_spin_strings_m1,n_spin_strings,n_spin,spi
 implicit none
 integer, intent(in) :: n_spin_strings_m1,n_spin_strings,n_spin,norb
 integer, intent(in) :: spin_strings_m1(n_spin_strings_m1,n_spin-1), spin_strings(n_spin_strings,n_spin)
-integer, intent(out) :: spin_annihilation_matrix(norb,n_spin_strings,2)
+integer, intent(inout) :: spin_annihilation_matrix(norb,n_spin_strings,2)
 integer :: temp_string(n_spin-1)
 integer :: sign, i, j, k
 logical :: indicator
@@ -737,7 +721,7 @@ integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_annihilation_cr
 complex, intent(in) :: hopping(norb,norb), interaction(norb,norb,norb,norb)
 complex, intent(out) :: spin_nr_hamiltonian(n_spin_strings,n_spin_strings)
 integer :: j,p,q,r,s, temp_state1,temp_state2,temp_sign1,temp_sign2
-
+if (n_spin .gt. 0) then
 do j=1,n_spin_strings
    do q=1,n_spin
       do p=1,norb
@@ -759,6 +743,9 @@ do j=1,n_spin_strings
       end do
    end do
 end do
+else
+spin_nr_hamiltonian(:,:) = 0
+end if
 end subroutine fill_nr_single_spin_hamiltonian
 
 
