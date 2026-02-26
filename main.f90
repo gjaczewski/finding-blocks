@@ -5,7 +5,7 @@ integer:: n_RAS_spaces_occ,n_RAS_spaces_virt,active_space, n_spaces
 integer, dimension(:), allocatable:: RAS_space_occ,RAS_space_virt,excit_array
 integer, dimension(:,:), allocatable:: RAS_el_array_alpha,RAS_el_array_beta
 logical:: relativistic
-integer ::   NRD_spin_tmp, NRD_spin_alpha, NRD_spin_beta
+integer :: NRD_spin_alpha, NRD_spin_beta
 integer :: i, j, temp, n_distributions_alpha,n_distributions_beta, n_distributions_alpha_p1,n_distributions_beta_p1, n_distributions_alpha_m1,n_distributions_beta_m1
 integer :: max,n_combinations
 integer, allocatable :: all_combinations(:,:)
@@ -25,8 +25,8 @@ relativistic=.true.
   
 norb=6
 
-n_alpha=1
-n_beta=2
+n_alpha=3
+n_beta=3
   
 n_RAS_spaces_occ=1
 n_RAS_spaces_virt=1
@@ -47,9 +47,16 @@ allocate(hopping_beta(norb,norb))
 allocate(interaction_mix(norb,norb,norb,norb))
 allocate(interaction_alpha(norb,norb,norb,norb))
 allocate(interaction_beta(norb,norb,norb,norb))
+hopping_alpha(:,:) = 0
+hopping_beta(:,:) = 0
+interaction_alpha(:,:,:,:) = 0
+interaction_beta(:,:,:,:) = 0
+interaction_mix(:,:,:,:) = 0
 if (relativistic .eqv. .true.) then
     allocate(hso_ab(norb,norb))
     allocate(hso_ba(norb,norb))
+    hso_ab(:,:) = 0
+    hso_ba(:,:) = 0
 end if 
 !***********************
 !here we check if input is ok 
@@ -74,7 +81,7 @@ end do
 
 ! here we calculate number of possible distributions NRD_spin_alpha, NRD_spin_beta and number of distributions for fixed spin
 
-call count_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta)
+call count_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta)
 
 allocate(RAS_el_array_alpha(NRD_spin_alpha,n_spaces))
 allocate(RAS_el_array_beta(NRD_spin_beta,n_spaces))
@@ -85,7 +92,7 @@ write(*,*) "NRD_spin_beta: ",NRD_spin_beta
 ! here we fill RAS_el_array_spin tables and calculate NRDa, NRDb
 !NRD(:,1) denotes beginning of spin block, NRD(:,2) denotes end
 
-call find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
+call find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
 
 write(*,*) "NRDa:"
 write(*,*) NRDa(1,:)

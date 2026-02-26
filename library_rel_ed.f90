@@ -125,10 +125,10 @@ do i=1,norb
 end do
 end subroutine check_hamiltonian
 
-subroutine count_distributions(n_s, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions)
+subroutine count_distributions(n_s, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions)
 implicit none
 integer, intent(in) :: n_s, n_RAS_spaces_occ,n_RAS_spaces_virt, active_space
-integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt), excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
+integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ), excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
 integer ::i,j
 integer, intent(in) :: n_combinations,n_spaces
 integer, intent(in) :: all_combinations(n_combinations,n_spaces)
@@ -220,12 +220,12 @@ end do
 end subroutine find_distributions
 
 
-subroutine count_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta)
+subroutine count_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta)
 implicit none
 logical, intent(in) :: relativistic
 integer, intent(in) :: n_alpha,n_beta
 integer, intent(in) :: n_RAS_spaces_occ,n_RAS_spaces_virt, active_space
-integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ), excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt), RAS_space_virt(n_RAS_spaces_virt)
+integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ), excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
 integer, intent(in) :: n_combinations,n_spaces
 integer, intent(in) :: all_combinations(n_combinations,n_spaces)
 integer, intent(out) :: n_distributions_alpha,n_distributions_beta
@@ -235,14 +235,14 @@ n_distributions_alpha_p1 = 0
 n_distributions_beta_p1 = 0
 n_distributions_alpha_m1 = 0    
 n_distributions_beta_m1 = 0
-call count_distributions(n_alpha, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha)
-call count_distributions(n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta)
+call count_distributions(n_alpha, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha)
+call count_distributions(n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta)
 if (relativistic .eqv. .true.) then
-  call count_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1)
-  call count_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1)
+  call count_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1)
+  call count_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1)
 
-  call count_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1)
-  call count_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1)
+  call count_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1)
+  call count_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1)
 end if 
 
 NRD_spin_alpha = n_distributions_alpha + n_distributions_alpha_m1 + n_distributions_alpha_p1
@@ -250,12 +250,12 @@ NRD_spin_beta= n_distributions_beta + n_distributions_beta_m1 + n_distributions_
 end subroutine count_spin_distributions
 
 
-subroutine find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,RAS_space_virt,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
+subroutine find_spin_distributions(relativistic,n_alpha,n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta,RAS_el_array_alpha,RAS_el_array_beta,NRDa,NRDb)
 implicit none
 logical, intent(in) :: relativistic
 integer, intent(in) :: n_alpha,n_beta
 integer, intent(in) :: n_RAS_spaces_occ,n_RAS_spaces_virt, active_space
-integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ), excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt), RAS_space_virt(n_RAS_spaces_virt)
+integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ), excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
 integer, intent(in) :: n_combinations,n_spaces
 integer, intent(in) :: all_combinations(n_combinations,n_spaces)
 integer, intent(in) :: n_distributions_alpha,n_distributions_beta
@@ -304,7 +304,6 @@ subroutine calculate_space_size(relativistic,NRD_spin_alpha,NRD_spin_beta,RAS_el
   integer, intent(out)::sizea(3,2),sizeb(3,2),size_tot(3,2) 
   logical, intent(in) :: relativistic
 
-  integer:: vector_length
   
   ! n_alpha n_beta block
   sizea(1,1)=1
