@@ -23,22 +23,22 @@ call cpu_time(start_time)
   !********* INPUT **********
 relativistic=.true.
   
-norb=6
+norb=2
 
-n_alpha=3
-n_beta=3
+n_alpha=1
+n_beta=1
   
-n_RAS_spaces_occ=1
-n_RAS_spaces_virt=1
+n_RAS_spaces_occ=0
+n_RAS_spaces_virt=0
 
 allocate(RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt))
 allocate(excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt))
 ! number of orbitals cannot be equal 0
 
-RAS_space_occ(1)=2
+!RAS_space_occ(1)=2
 !RAS_space_occ(2)=0
 active_space=2
-RAS_space_virt(1)=2
+!RAS_space_virt(1)=2
 !RAS_space_virt(2)=0
 excit_array(:)=1
   
@@ -48,15 +48,23 @@ allocate(interaction_mix(norb,norb,norb,norb))
 allocate(interaction_alpha(norb,norb,norb,norb))
 allocate(interaction_beta(norb,norb,norb,norb))
 hopping_alpha(:,:) = 0
-hopping_beta(:,:) = 0
+hopping_alpha(1,2) = -1
+hopping_alpha(2,1) = -1
+hopping_beta = hopping_alpha
 interaction_alpha(:,:,:,:) = 0
 interaction_beta(:,:,:,:) = 0
 interaction_mix(:,:,:,:) = 0
+interaction_mix(1,1,1,1) = 5
+interaction_mix(2,2,2,2) = 5
+allocate(hso_ab(norb,norb))
+allocate(hso_ba(norb,norb))
 if (relativistic .eqv. .true.) then
-    allocate(hso_ab(norb,norb))
-    allocate(hso_ba(norb,norb))
     hso_ab(:,:) = 0
-    hso_ba(:,:) = 0
+    hso_ab(1,2) = 11
+    hso_ab(2,1) = 11
+    hso_ab(1,1) = 23
+    hso_ab(2,2) = 23
+    hso_ba = hso_ab
 end if 
 !***********************
 !here we check if input is ok 
@@ -278,7 +286,7 @@ if (relativistic .eqv. .true.) then
 
 end if
 
-vector = [0,0,0,0,1]
+vector = [0,0,0,0,0,1]
 vector_new(:) = 0
 
 if (relativistic .eqv. .false.) then
