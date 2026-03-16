@@ -18,10 +18,23 @@ complex, allocatable :: hopping_alpha(:,:),hopping_beta(:,:), interaction_mix(:,
 real, allocatable :: diagonal(:)
 real :: start_time, end_time
 real :: total_time
+type :: MyData
+    integer :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta, n_strings_alpha_p1,n_strings_beta_p1,n_strings_alpha_m1,n_strings_beta_m1
+    integer, allocatable:: alpha_annihilation_creation_matrix(:,:,:,:), beta_annihilation_creation_matrix(:,:,:,:), strings_alpha(:,:), strings_beta(:,:)
+    integer, allocatable :: alpha_annihilation_creation_matrix_p1(:,:,:,:), beta_annihilation_creation_matrix_p1(:,:,:,:), strings_alpha_p1(:,:), strings_beta_p1(:,:)
+    integer, allocatable :: alpha_annihilation_creation_matrix_m1(:,:,:,:), beta_annihilation_creation_matrix_m1(:,:,:,:), strings_alpha_m1(:,:), strings_beta_m1(:,:)
+    integer, allocatable :: alpha_annihilation_matrix(:,:,:),beta_annihilation_matrix(:,:,:),alpha_annihilation_matrix_p1(:,:,:),beta_annihilation_matrix_p1(:,:,:)
+    integer :: size_tot(3,2)
+    complex, allocatable :: alpha_hamiltonian(:,:), beta_hamiltonian(:,:), interaction_mix(:,:,:,:),hso_ab(:,:),hso_ba(:,:),vector(:)
+    complex, allocatable :: alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:)
+    complex, allocatable :: alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
+    logical :: relativistic
+end type 
+type(MyData), target :: dane
 call cpu_time(start_time)
 
   !********* INPUT **********
-relativistic=.true.
+relativistic=.false.
   
 norb=2
 
@@ -192,7 +205,7 @@ call generate_diagonal_elements(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_
 
 !here we repeat for other blocks
 
-if (relativistic .eqv. .true.) then
+
 
 !here we generate strings
     
@@ -284,17 +297,64 @@ if (relativistic .eqv. .true.) then
         call generate_diagonal_elements(alpha_hamiltonian_m1,str_a_m1,sizea(3,2),n_alpha-1,beta_hamiltonian_p1,str_b_p1,sizeb(2,2),n_beta+1,interaction_mix,norb,diagonal(size_tot(3,1):size_tot(3,2)+size_tot(2,2)+size_tot(1,2)))
     end if
 
-end if
 
-vector = [0,0,0,0,0,1]
-vector_new(:) = 0
 
-if (relativistic .eqv. .false.) then
-    call nr_matrix_vector_product(alpha_hamiltonian,str_a,sizea(1,2),n_alpha,beta_hamiltonian,str_b,sizeb(1,2),n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-else
-    call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction_mix,hso_ab,hso_ba,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
-end if
-write(*,*) vector_new
+!vector = [0,0,0,0,0,1]
+!vector_new(:) = 0
+!call matrix_vector_product(relativistic,alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,str_a,sizea(1,2),str_a_p1,sizea(2,2),str_a_m1,sizea(3,2),n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,str_b,sizeb(1,2),str_b_p1,sizeb(2,2),str_b_m1,sizeb(3,2),n_beta,interaction_mix,hso_ab,hso_ba,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+!write(*,*) vector_new
+
+dane%n_strings_alpha = sizea(1,2)
+dane%n_strings_beta = sizeb(1,2)
+dane%norb = norb
+dane%n_alpha = n_alpha
+dane%n_beta = n_beta
+dane%n_strings_alpha_p1 = sizea(2,2)
+dane%n_strings_beta_p1 = sizeb(2,2)
+dane%n_strings_alpha_m1 = sizea(3,2)
+dane%n_strings_beta_m1 = sizeb(3,2)
+
+dane%alpha_annihilation_creation_matrix = alpha_annihilation_creation_matrix
+dane%beta_annihilation_creation_matrix = beta_annihilation_creation_matrix
+dane%strings_alpha = str_a
+dane%strings_beta = str_b
+
+dane%alpha_annihilation_creation_matrix_p1 = alpha_annihilation_creation_matrix_p1
+dane%beta_annihilation_creation_matrix_p1 = beta_annihilation_creation_matrix_p1
+dane%strings_alpha_p1 = str_a_p1
+dane%strings_beta_p1 = str_b_p1
+
+dane%alpha_annihilation_creation_matrix_m1 = alpha_annihilation_creation_matrix_m1
+dane%beta_annihilation_creation_matrix_m1 = beta_annihilation_creation_matrix_m1
+dane%strings_alpha_m1 = str_a_m1
+dane%strings_beta_m1 = str_b_m1
+
+dane%alpha_annihilation_matrix = alpha_annihilation_matrix
+dane%beta_annihilation_matrix = beta_annihilation_matrix
+dane%alpha_annihilation_matrix_p1 = alpha_annihilation_matrix_p1
+dane%beta_annihilation_matrix_p1 = beta_annihilation_matrix_p1
+
+dane%size_tot = size_tot
+
+dane%alpha_hamiltonian = alpha_hamiltonian
+dane%beta_hamiltonian = beta_hamiltonian
+dane%interaction_mix = interaction_mix
+dane%hso_ab = hso_ab
+dane%hso_ba = hso_ba
+dane%vector = vector
+
+dane%alpha_hamiltonian_p1 = alpha_hamiltonian_p1
+dane%beta_hamiltonian_p1 = beta_hamiltonian_p1
+
+dane%alpha_hamiltonian_m1 = alpha_hamiltonian_m1
+dane%beta_hamiltonian_m1 = beta_hamiltonian_m1
+
+dane%relativistic = relativistic
+!call SlepcInitialize(PETSC_NULL_CHARACTER,ierr)
+
+
+
+
 write(*,*) "KONIEC"
 call cpu_time(end_time)
 total_time = end_time - start_time

@@ -991,6 +991,24 @@ vector_new(size_tot(3,1):size_tot(1,2)+size_tot(2,2)+size_tot(3,2)) = vector_new
 
 end subroutine rel_matrix_vector_product
 
+subroutine matrix_vector_product(relativistic,alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,strings_alpha,n_strings_alpha,strings_alpha_p1,n_strings_alpha_p1,strings_alpha_m1,n_strings_alpha_m1,n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,strings_beta,n_strings_beta,strings_beta_p1,n_strings_beta_p1,strings_beta_m1,n_strings_beta_m1,n_beta,interaction_mix,hso_ab,hso_ba,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta, n_strings_alpha_p1,n_strings_beta_p1,n_strings_alpha_m1,n_strings_beta_m1
+integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+integer, intent (in) :: alpha_annihilation_creation_matrix_p1(norb,norb,n_strings_alpha_p1,2), beta_annihilation_creation_matrix_p1(norb,norb,n_strings_beta_p1,2), strings_alpha_p1(n_strings_alpha_p1,n_alpha+1), strings_beta_p1(n_strings_beta_p1,n_beta+1)
+integer, intent (in) :: alpha_annihilation_creation_matrix_m1(norb,norb,n_strings_alpha_m1,2), beta_annihilation_creation_matrix_m1(norb,norb,n_strings_beta_m1,2), strings_alpha_m1(n_strings_alpha_m1,n_alpha-1), strings_beta_m1(n_strings_beta_m1,n_beta-1)
+integer, intent (in) :: alpha_annihilation_matrix(norb,n_strings_alpha,2),beta_annihilation_matrix(norb,n_strings_beta,2),alpha_annihilation_matrix_p1(norb,n_strings_alpha_p1,2),beta_annihilation_matrix_p1(norb,n_strings_beta_p1,2)
+integer, intent (in) :: size_tot(3,2)
+complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb),hso_ab(norb,norb),hso_ba(norb,norb),vector(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
+complex, intent (in) :: alpha_hamiltonian_p1(n_strings_alpha_p1,n_strings_alpha_p1), beta_hamiltonian_p1(n_strings_beta_p1,n_strings_beta_p1)
+complex, intent (in) :: alpha_hamiltonian_m1(n_strings_alpha_m1,n_strings_alpha_m1), beta_hamiltonian_m1(n_strings_beta_m1,n_strings_beta_m1)
+logical, intent (in) :: relativistic
+complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
+   if (relativistic .eqv. .true.) then
+      call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,strings_alpha,n_strings_alpha,strings_alpha_p1,n_strings_alpha_p1,strings_alpha_m1,n_strings_alpha_m1,n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,strings_beta,n_strings_beta,strings_beta_p1,n_strings_beta_p1,strings_beta_m1,n_strings_beta_m1,n_beta,interaction_mix,hso_ab,hso_ba,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
+   else
+      call nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+   end if
+end subroutine matrix_vector_product
 
 subroutine generate_diagonal_elements(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,diagonal)
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
@@ -1011,6 +1029,11 @@ do mu=1,n_strings_alpha*n_strings_beta
 end do
 diagonal = temp_diagonal
 end subroutine generate_diagonal_elements
+
+
+
+
+
 !**********UNUSED, BUT POTENTIALLY USEFUL ROUTINES**************
 
 
