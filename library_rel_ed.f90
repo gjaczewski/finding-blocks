@@ -1,4 +1,7 @@
 module library_rel_ed
+use petsc
+use slepc
+use iso_c_binding
 implicit none
 
 type :: t_params
@@ -655,7 +658,7 @@ end if
 end subroutine sort_states
 
 
-subroutine ISEQUAL(vector1,vector2,length,indicator)
+subroutine ISEQUALly(vector1,vector2,length,indicator)
 implicit none
     integer, intent(in) :: length
     logical, intent(inout) :: indicator
@@ -670,7 +673,7 @@ implicit none
          exit
         end if
     end do
-end subroutine ISEQUAL
+end subroutine ISEQUALly
 
 
 
@@ -727,7 +730,7 @@ do i=1,n_spin_strings
    do j=1,n_spin
       call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string,sign)
       do k=1,n_spin_strings_m1
-         call ISEQUAL(temp_string,spin_strings_m1(k,:),n_spin-1,indicator)
+         call ISEQUALly(temp_string,spin_strings_m1(k,:),n_spin-1,indicator)
          if (indicator .eqv. .true.) then
             spin_annihilation_matrix(spin_strings(i,j),i,1) = k
             spin_annihilation_matrix(spin_strings(i,j),i,2) = sign
@@ -768,7 +771,7 @@ do i=1,n_spin_strings
       do k=1,n_spin_strings
          do l=1,n_spin
             call annihilation(spin_strings(k,l),spin_strings(k,:),n_spin,temp_string2,sign2)
-            call ISEQUAL(temp_string1,temp_string2,n_spin-1,indicator)
+            call ISEQUALly(temp_string1,temp_string2,n_spin-1,indicator)
             if (indicator .eqv. .true.) then
                annihilation_creation_matrix(spin_strings(i,j),spin_strings(k,l),k,1) = i
                annihilation_creation_matrix(spin_strings(i,j),spin_strings(k,l),k,2) = sign1*sign2
@@ -825,8 +828,8 @@ end subroutine fill_nr_single_spin_hamiltonian
 subroutine nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
 integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb), vector(n_strings_alpha*n_strings_beta)
-complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta)
+complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb)
+complex(8), intent (inout) :: vector_new(n_strings_alpha*n_strings_beta),vector(n_strings_alpha*n_strings_beta)
 complex :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
 integer :: mu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
 new_table(:,:) = 0
@@ -876,10 +879,10 @@ end subroutine nr_matrix_vector_product
 
 subroutine rel_matrix_vector_product(dane,vector,vector_new)
 type(t_params), intent(inout) :: dane
-complex, intent(in) :: vector(dane%n_strings_alpha*dane%n_strings_beta+dane%n_strings_alpha_p1*dane%n_strings_beta_m1+dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
-complex, intent (inout) :: vector_new(dane%n_strings_alpha*dane%n_strings_beta+dane%n_strings_alpha_p1*dane%n_strings_beta_m1+dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
-complex ::  vector_new_1(dane%n_strings_alpha*dane%n_strings_beta),vector_new_2(dane%n_strings_alpha_p1*dane%n_strings_beta_m1),vector_new_3(dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
-complex :: temp_table1(dane%n_strings_alpha,dane%n_strings_beta), new_table1(dane%n_strings_alpha,dane%n_strings_beta),temp_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1), new_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1),temp_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1), new_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1)
+complex(8), intent(inout) :: vector(dane%n_strings_alpha*dane%n_strings_beta+dane%n_strings_alpha_p1*dane%n_strings_beta_m1+dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
+complex(8), intent (inout) :: vector_new(dane%n_strings_alpha*dane%n_strings_beta+dane%n_strings_alpha_p1*dane%n_strings_beta_m1+dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
+complex(8) ::  vector_new_1(dane%n_strings_alpha*dane%n_strings_beta),vector_new_2(dane%n_strings_alpha_p1*dane%n_strings_beta_m1),vector_new_3(dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
+complex(8) :: temp_table1(dane%n_strings_alpha,dane%n_strings_beta), new_table1(dane%n_strings_alpha,dane%n_strings_beta),temp_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1), new_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1),temp_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1), new_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1)
 integer :: i,j,k,l,p,q,mu, temp_state1, temp_state2, temp_sign1, temp_sign2
 
 call nr_matrix_vector_product(dane%alpha_hamiltonian,dane%str_a,dane%n_strings_alpha,dane%n_alpha,dane%beta_hamiltonian,dane%str_b,dane%n_strings_beta,dane%n_beta,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix,dane%beta_annihilation_creation_matrix,vector(dane%size_tot(1,1):dane%size_tot(1,2)),vector_new_1)
@@ -1022,8 +1025,8 @@ end subroutine rel_matrix_vector_product
   subroutine matrix_vector_product(dane, vector, vector_new)
     implicit none
     type(t_params), intent(inout) :: dane
-    complex, intent(in) :: vector(:)
-    complex, intent(inout) :: vector_new(:)
+    complex(8), intent(inout) :: vector(:)
+    complex(8), intent(inout) :: vector_new(:)
     !integer, intent(in) :: n
     !n = dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2)
 
@@ -1093,7 +1096,7 @@ integer, intent(inout) :: string_number
 integer :: i, j, k
 logical :: indicator
 do i=1,n_strings_alpha
-   call ISEQUAL(string_alpha,strings_alpha(i,:),n_alpha,indicator)
+   call ISEQUALly(string_alpha,strings_alpha(i,:),n_alpha,indicator)
    if (indicator .eqv. .true.) then
       j = i
       exit
@@ -1101,7 +1104,7 @@ do i=1,n_strings_alpha
 end do
 
 do i=1,n_strings_beta
-   call ISEQUAL(string_beta,strings_beta(i,:),n_beta,indicator)
+   call ISEQUALly(string_beta,strings_beta(i,:),n_beta,indicator)
    if (indicator .eqv. .true.) then
       k = i
       exit
@@ -1159,7 +1162,7 @@ do i=1,n_spin_strings
    do j=1,norb
       call creation(j,spin_strings(i,:),n_spin,temp_string,sign)
       do k=1,n_spin_strings_p1
-         call ISEQUAL(temp_string,spin_strings_p1(k,:),n_spin+1,indicator)
+         call ISEQUALly(temp_string,spin_strings_p1(k,:),n_spin+1,indicator)
          if (indicator .eqv. .true.) then
             spin_creation_matrix(j,i,1) = k
             spin_creation_matrix(j,i,2) = sign
@@ -1178,7 +1181,52 @@ end subroutine fill_creation_results
 
 
 
+subroutine MyMatMult(A, x, y, ierr)
+         use petsc 
+         use slepc
+         implicit none
+        type(tMat) :: A
+        type(tVec) :: x, y
+        integer :: ierr
+        
+        type(c_ptr) :: ctx_ptr
+        type(t_params), pointer :: params
+        
+        ! Wskaźniki na jednowymiarowe tablice Fortranowe
+     complex(kind=8), pointer :: x_array(:)
+    complex(kind=8), pointer :: y_array(:)
+        
+        ! 1. Pobieramy wskaźnik C z macierzy A i konwertujemy na Twoje dane
+        call MatShellGetContext(A, ctx_ptr, ierr)
+        call c_f_pointer(ctx_ptr, params)
+        
+        ! 2. WYCIĄGAMY TABLICE Z WEKTORÓW PETSc
+        ! x_array to wektor wejściowy (tylko do odczytu)
+        call VecGetArrayRead_F90(x, x_array, ierr)
+        ! y_array to wektor wyjściowy (do zapisu wyniku)
+        call VecGetArray_F90(y, y_array, ierr)
+        
+        ! ==================================================================
+        ! 3. TUTAJ WCHODZI TWOJA RUTYNA MNOŻĄCA!
+        ! ==================================================================
+        ! Wywołujesz swój stary, sprawdzony kod Fortranowy, podając mu 
+        ! wyciągnięte przed chwilą tablice i zmienne z Twojej struktury.
+        
+        ! Przykład wywołania:
 
+          call matrix_vector_product(params,x_array,y_array)
+
+        
+        ! ==================================================================
+        
+        ! 4. ODDAJEMY TABLICE DO PETSc (KRYTYCZNY KROK)
+        ! Jeśli tego nie zrobisz, program wycieknie pamięć lub się zawiesi
+        call VecRestoreArrayRead_F90(x, x_array, ierr)
+        call VecRestoreArray_F90(y, y_array, ierr)
+        
+        ierr = 0
+        write(*,*) "OK"
+    end subroutine MyMatMult
 end module library_rel_ed
 
 
