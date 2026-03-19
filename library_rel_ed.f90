@@ -1,3 +1,33 @@
+module library_rel_ed
+implicit none
+
+type :: t_params
+    sequence
+    integer :: n_strings_alpha, n_strings_beta, norb
+    integer :: n_alpha, n_beta
+    integer :: n_strings_alpha_p1, n_strings_beta_p1
+    integer :: n_strings_alpha_m1, n_strings_beta_m1
+    integer, allocatable :: alpha_annihilation_creation_matrix(:,:,:,:)
+    integer, allocatable :: beta_annihilation_creation_matrix(:,:,:,:)
+    integer, allocatable :: str_a(:,:), str_b(:,:)
+    integer, allocatable :: alpha_annihilation_creation_matrix_p1(:,:,:,:)
+    integer, allocatable :: beta_annihilation_creation_matrix_p1(:,:,:,:)
+    integer, allocatable :: str_a_p1(:,:), str_b_p1(:,:)
+    integer, allocatable :: alpha_annihilation_creation_matrix_m1(:,:,:,:)
+    integer, allocatable :: beta_annihilation_creation_matrix_m1(:,:,:,:)
+    integer, allocatable :: str_a_m1(:,:), str_b_m1(:,:)
+    integer, allocatable :: alpha_annihilation_matrix(:,:,:)
+    integer, allocatable :: beta_annihilation_matrix(:,:,:)
+    integer, allocatable :: alpha_annihilation_matrix_p1(:,:,:)
+    integer, allocatable :: beta_annihilation_matrix_p1(:,:,:)
+    integer :: size_tot(3,2)
+    complex, allocatable :: alpha_hamiltonian(:,:), beta_hamiltonian(:,:)
+    complex, allocatable :: interaction_mix(:,:,:,:), hso_ab(:,:), hso_ba(:,:)
+    complex, allocatable :: alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:)
+    complex, allocatable :: alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
+    logical :: relativistic
+end type t_params
+contains
 subroutine check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
 
   implicit none
@@ -357,32 +387,35 @@ subroutine calc_size_block(range1,range2,NRD_spin,RAS_el_array_spin,n_RAS_spaces
 
   integer:: i,r,v,a
   integer:: siz
-  real(8) :: nCr_dp
+  !real(8) :: nCr_dp
+  real(8) :: c
   !write(*,*)"range1,range2",range1,range2
   vec_length=0
   do i=range1,range2
      a=n_RAS_spaces_occ+1 
      siz=1
      do r=1,n_RAS_spaces_occ
-        siz=siz*int(nCr_dp(RAS_space_occ(r),RAS_el_array_spin(i,r)))
+        call bin_coeff(RAS_space_occ(r),RAS_el_array_spin(i,r),c)
+        siz=siz*int(c)
      end do
      do v=1,n_RAS_spaces_virt
-        siz=siz*int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v)))
+        call bin_coeff(RAS_space_virt(v),RAS_el_array_spin(i,a+v),c)
+        siz=siz*int(c)
      end do
-     siz=siz*int(nCr_dp(active_space,RAS_el_array_spin(i,a)))
+     call bin_coeff(active_space,RAS_el_array_spin(i,a),c)
+     siz=siz*int(c)
      vec_length=vec_length+siz
   end do
   !write(*,*)"vec_length",vec_length
   call flush(6)
 end subroutine calc_size_block
 
-
-function nCr_dp(n, r) result(c)
-    implicit none
-    integer, intent(in) :: n, r
-    real(8) :: c
-    integer :: i, k
-
+subroutine bin_coeff(n,r,c)
+implicit none
+integer, intent(in) :: n,r
+real(8), intent(inout) :: c
+integer :: i,k
+    c = 0
     if (r < 0 .or. r > n) then
         c = 0.0d0
         return
@@ -394,7 +427,7 @@ function nCr_dp(n, r) result(c)
     do i = 1, k
         c = c * dble(n - k + i) / dble(i)
     end do
-  end function nCr_dp
+end subroutine bin_coeff
 
 
   subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s)
@@ -417,7 +450,8 @@ function nCr_dp(n, r) result(c)
   integer :: n_str_temp(n_RAS_spaces_occ+1+n_RAS_spaces_virt)
   integer :: j
   integer :: a, i , r ,v
-  real(8) :: nCr_dp
+  real(8) :: c
+  !real(8) :: nCr_dp
 
   a=n_RAS_spaces_occ+1
   tot_siz_space = 0
@@ -428,21 +462,22 @@ function nCr_dp(n, r) result(c)
      n_el_temp = 0
 
    do r=1,n_RAS_spaces_occ
-      space_sizes(j) = int(nCr_dp(RAS_space_occ(r),RAS_el_array_spin(i,r)))
+      call bin_coeff(RAS_space_occ(r),RAS_el_array_spin(i,r),c)
+      space_sizes(j) = int(c)
       siz_space=siz_space*space_sizes(j)
       n_str_temp(j) = siz_space
       j = j + 1
 
    end do
-
-   space_sizes(j) = int(nCr_dp(active_space,RAS_el_array_spin(i,a)))
+   call bin_coeff(active_space,RAS_el_array_spin(i,a),c)
+   space_sizes(j) = int(c)
    siz_space=siz_space*space_sizes(j)
    n_str_temp(j) = siz_space
    j = j + 1
 
    do v=1,n_RAS_spaces_virt
-   space_sizes(j) = int(nCr_dp(RAS_space_virt(v),RAS_el_array_spin(i,a+v)))
-
+   call bin_coeff(RAS_space_virt(v),RAS_el_array_spin(i,a+v),c)
+   space_sizes(j) = int(c)
    siz_space=siz_space*space_sizes(j)
    n_str_temp(j) = siz_space
    j = j + 1
@@ -839,41 +874,34 @@ end do
 end subroutine nr_matrix_vector_product
 
 
-subroutine rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,strings_alpha,n_strings_alpha,strings_alpha_p1,n_strings_alpha_p1,strings_alpha_m1,n_strings_alpha_m1,n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,strings_beta,n_strings_beta,strings_beta_p1,n_strings_beta_p1,strings_beta_m1,n_strings_beta_m1,n_beta,interaction_mix,hso_ab,hso_ba,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
-integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta, n_strings_alpha_p1,n_strings_beta_p1,n_strings_alpha_m1,n_strings_beta_m1
-integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-integer, intent (in) :: alpha_annihilation_creation_matrix_p1(norb,norb,n_strings_alpha_p1,2), beta_annihilation_creation_matrix_p1(norb,norb,n_strings_beta_p1,2), strings_alpha_p1(n_strings_alpha_p1,n_alpha+1), strings_beta_p1(n_strings_beta_p1,n_beta+1)
-integer, intent (in) :: alpha_annihilation_creation_matrix_m1(norb,norb,n_strings_alpha_m1,2), beta_annihilation_creation_matrix_m1(norb,norb,n_strings_beta_m1,2), strings_alpha_m1(n_strings_alpha_m1,n_alpha-1), strings_beta_m1(n_strings_beta_m1,n_beta-1)
-integer, intent (in) :: alpha_annihilation_matrix(norb,n_strings_alpha,2),beta_annihilation_matrix(norb,n_strings_beta,2),alpha_annihilation_matrix_p1(norb,n_strings_alpha_p1,2),beta_annihilation_matrix_p1(norb,n_strings_beta_p1,2)
-integer, intent (in) :: size_tot(3,2)
-complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb),hso_ab(norb,norb),hso_ba(norb,norb),vector(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
-complex, intent (in) :: alpha_hamiltonian_p1(n_strings_alpha_p1,n_strings_alpha_p1), beta_hamiltonian_p1(n_strings_beta_p1,n_strings_beta_p1)
-complex, intent (in) :: alpha_hamiltonian_m1(n_strings_alpha_m1,n_strings_alpha_m1), beta_hamiltonian_m1(n_strings_beta_m1,n_strings_beta_m1)
-complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
-complex ::  vector_new_1(n_strings_alpha*n_strings_beta),vector_new_2(n_strings_alpha_p1*n_strings_beta_m1),vector_new_3(n_strings_alpha_m1*n_strings_beta_p1)
-complex :: temp_table1(n_strings_alpha,n_strings_beta), new_table1(n_strings_alpha,n_strings_beta),temp_table2(n_strings_alpha_p1,n_strings_beta_m1), new_table2(n_strings_alpha_p1,n_strings_beta_m1),temp_table3(n_strings_alpha_m1,n_strings_beta_p1), new_table3(n_strings_alpha_m1,n_strings_beta_p1)
+subroutine rel_matrix_vector_product(dane,vector,vector_new)
+type(t_params), intent(inout) :: dane
+complex, intent(in) :: vector(dane%n_strings_alpha*dane%n_strings_beta+dane%n_strings_alpha_p1*dane%n_strings_beta_m1+dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
+complex, intent (inout) :: vector_new(dane%n_strings_alpha*dane%n_strings_beta+dane%n_strings_alpha_p1*dane%n_strings_beta_m1+dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
+complex ::  vector_new_1(dane%n_strings_alpha*dane%n_strings_beta),vector_new_2(dane%n_strings_alpha_p1*dane%n_strings_beta_m1),vector_new_3(dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
+complex :: temp_table1(dane%n_strings_alpha,dane%n_strings_beta), new_table1(dane%n_strings_alpha,dane%n_strings_beta),temp_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1), new_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1),temp_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1), new_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1)
 integer :: i,j,k,l,p,q,mu, temp_state1, temp_state2, temp_sign1, temp_sign2
 
-call nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector(size_tot(1,1):size_tot(1,2)),vector_new_1)
-call nr_matrix_vector_product(alpha_hamiltonian_p1,strings_alpha_p1,n_strings_alpha_p1,n_alpha+1,beta_hamiltonian_m1,strings_beta_m1,n_strings_beta_m1,n_beta-1,interaction_mix,norb,alpha_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,vector(size_tot(2,1):size_tot(1,2)+size_tot(2,2)),vector_new_2)
-call nr_matrix_vector_product(alpha_hamiltonian_m1,strings_alpha_m1,n_strings_alpha_m1,n_alpha-1,beta_hamiltonian_p1,strings_beta_p1,n_strings_beta_p1,n_beta+1,interaction_mix,norb,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix_p1,vector(size_tot(3,1):size_tot(1,2)+size_tot(2,2)+size_tot(3,2)),vector_new_3)
+call nr_matrix_vector_product(dane%alpha_hamiltonian,dane%str_a,dane%n_strings_alpha,dane%n_alpha,dane%beta_hamiltonian,dane%str_b,dane%n_strings_beta,dane%n_beta,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix,dane%beta_annihilation_creation_matrix,vector(dane%size_tot(1,1):dane%size_tot(1,2)),vector_new_1)
+call nr_matrix_vector_product(dane%alpha_hamiltonian_p1,dane%str_a_p1,dane%n_strings_alpha_p1,dane%n_alpha+1,dane%beta_hamiltonian_m1,dane%str_b_m1,dane%n_strings_beta_m1,dane%n_beta-1,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix_p1,dane%beta_annihilation_creation_matrix_m1,vector(dane%size_tot(2,1):dane%size_tot(1,2)+dane%size_tot(2,2)),vector_new_2)
+call nr_matrix_vector_product(dane%alpha_hamiltonian_m1,dane%str_a_m1,dane%n_strings_alpha_m1,dane%n_alpha-1,dane%beta_hamiltonian_p1,dane%str_b_p1,dane%n_strings_beta_p1,dane%n_beta+1,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix_m1,dane%beta_annihilation_creation_matrix_p1,vector(dane%size_tot(3,1):dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2)),vector_new_3)
 
 new_table1(:,:) = 0
 new_table2(:,:) = 0
 new_table3(:,:) = 0
 
-do i=1,n_strings_alpha
-   mu = (i-1)*n_strings_beta+1
-   do j=1,n_strings_beta
+do i=1,dane%n_strings_alpha
+   mu = (i-1)*dane%n_strings_beta+1
+   do j=1,dane%n_strings_beta
       temp_table1(i,j) = vector(mu)
       mu = mu + 1
    end do
 end do
 
 
-do i=1,n_strings_alpha_p1
-   mu = (i-1)*n_strings_beta_m1+size_tot(2,1)
-   do j=1,n_strings_beta_m1
+do i=1,dane%n_strings_alpha_p1
+   mu = (i-1)*dane%n_strings_beta_m1+dane%size_tot(2,1)
+   do j=1,dane%n_strings_beta_m1
       temp_table2(i,j) = vector(mu)
       mu = mu + 1
    end do
@@ -881,26 +909,26 @@ end do
 
 
 
-do i=1,n_strings_alpha_m1
-   mu = (i-1)*n_strings_beta_p1+size_tot(3,1)
-   do j=1,n_strings_beta_p1
+do i=1,dane%n_strings_alpha_m1
+   mu = (i-1)*dane%n_strings_beta_p1+dane%size_tot(3,1)
+   do j=1,dane%n_strings_beta_p1
       temp_table3(i,j) = vector(mu)
       mu = mu + 1
    end do
 end do
 
 
-do j=1,n_strings_beta
-      do p=1,n_beta
-         temp_state1 = beta_annihilation_matrix(strings_beta(j,p),j,1)
+do j=1,dane%n_strings_beta
+      do p=1,dane%n_beta
+         temp_state1 = dane%beta_annihilation_matrix(dane%str_b(j,p),j,1)
          if (temp_state1 .ne. 0) then
-            temp_sign1 = beta_annihilation_matrix(strings_beta(j,p),j,2)
-            do k=1,n_strings_alpha_p1
-               do q=1,n_alpha+1
-                  temp_state2 = alpha_annihilation_matrix_p1(strings_alpha_p1(k,q),k,1)
+            temp_sign1 = dane%beta_annihilation_matrix(dane%str_b(j,p),j,2)
+            do k=1,dane%n_strings_alpha_p1
+               do q=1,dane%n_alpha+1
+                  temp_state2 = dane%alpha_annihilation_matrix_p1(dane%str_a_p1(k,q),k,1)
                   if (temp_state2 .ne. 0) then
-                     temp_sign2 = temp_sign1 * alpha_annihilation_matrix_p1(strings_alpha_p1(k,q),k,2)
-                     new_table1(temp_state2,j) = new_table1(temp_state2,j) +  temp_sign2*conjg(hso_ab(strings_alpha_p1(k,q),strings_beta(j,p)))*temp_table2(k,temp_state1)*(-1)**n_alpha
+                     temp_sign2 = temp_sign1 * dane%alpha_annihilation_matrix_p1(dane%str_a_p1(k,q),k,2)
+                     new_table1(temp_state2,j) = new_table1(temp_state2,j) +  temp_sign2*conjg(dane%hso_ab(dane%str_a_p1(k,q),dane%str_b(j,p)))*temp_table2(k,temp_state1)*(-1)**dane%n_alpha
                   end if
                end do
             end do
@@ -908,17 +936,17 @@ do j=1,n_strings_beta
       end do
 end do
 
-do i=1,n_strings_alpha
-   do q=1,n_alpha
-      temp_state1 = alpha_annihilation_matrix(strings_alpha(i,q),i,1) 
+do i=1,dane%n_strings_alpha
+   do q=1,dane%n_alpha
+      temp_state1 = dane%alpha_annihilation_matrix(dane%str_a(i,q),i,1) 
       if (temp_state1 .ne. 0) then
-         temp_sign1 = alpha_annihilation_matrix(strings_alpha(i,q),i,2)
-         do l=1,n_strings_beta_p1
-            do p=1,n_beta+1
-               temp_state2 = beta_annihilation_matrix_p1(strings_beta_p1(l,p),l,1)
+         temp_sign1 = dane%alpha_annihilation_matrix(dane%str_a(i,q),i,2)
+         do l=1,dane%n_strings_beta_p1
+            do p=1,dane%n_beta+1
+               temp_state2 = dane%beta_annihilation_matrix_p1(dane%str_b_p1(l,p),l,1)
                if (temp_state2 .ne. 0) then
-                  temp_sign2 = temp_sign1*beta_annihilation_matrix_p1(strings_beta_p1(l,p),l,2)
-                  new_table1(i,temp_state2) = new_table1(i,temp_state2) + temp_sign2*hso_ab(strings_alpha(i,q),strings_beta_p1(l,p))*temp_table3(temp_state1,l)*(-1)**(n_alpha-1)
+                  temp_sign2 = temp_sign1*dane%beta_annihilation_matrix_p1(dane%str_b_p1(l,p),l,2)
+                  new_table1(i,temp_state2) = new_table1(i,temp_state2) + temp_sign2*dane%hso_ab(dane%str_a(i,q),dane%str_b_p1(l,p))*temp_table3(temp_state1,l)*(-1)**(dane%n_alpha-1)
                end if
             end do
          end do 
@@ -926,17 +954,17 @@ do i=1,n_strings_alpha
    end do
 end do
 
-do i=1,n_strings_alpha_p1
-   do q=1,n_alpha+1
-      temp_state1 = alpha_annihilation_matrix_p1(strings_alpha_p1(i,q),i,1)
+do i=1,dane%n_strings_alpha_p1
+   do q=1,dane%n_alpha+1
+      temp_state1 = dane%alpha_annihilation_matrix_p1(dane%str_a_p1(i,q),i,1)
       if (temp_state1 .ne. 0) then
-        temp_sign1 = alpha_annihilation_matrix_p1(strings_alpha_p1(i,q),i,2)
-        do l=1,n_strings_beta
-         do p=1,n_beta
-            temp_state2 = beta_annihilation_matrix(strings_beta(l,p),l,1)
+        temp_sign1 = dane%alpha_annihilation_matrix_p1(dane%str_a_p1(i,q),i,2)
+        do l=1,dane%n_strings_beta
+         do p=1,dane%n_beta
+            temp_state2 = dane%beta_annihilation_matrix(dane%str_b(l,p),l,1)
             if (temp_state2 .ne. 0) then
-               temp_sign2 = temp_sign1*beta_annihilation_matrix(strings_beta(l,p),l,2)
-               new_table2(i,temp_state2) = new_table2(i,temp_state2) + temp_sign2*hso_ab(strings_alpha_p1(i,q),strings_beta(l,p))*temp_table1(temp_state1,l)*(-1)**n_alpha 
+               temp_sign2 = temp_sign1*dane%beta_annihilation_matrix(dane%str_b(l,p),l,2)
+               new_table2(i,temp_state2) = new_table2(i,temp_state2) + temp_sign2*dane%hso_ab(dane%str_a_p1(i,q),dane%str_b(l,p))*temp_table1(temp_state1,l)*(-1)**dane%n_alpha 
             end if
          end do
         end do        
@@ -944,17 +972,17 @@ do i=1,n_strings_alpha_p1
    end do
 end do
 
-do j=1,n_strings_beta_p1
-   do p=1,n_beta+1
-      temp_state1 = beta_annihilation_matrix_p1(strings_beta_p1(j,p),j,1)
+do j=1,dane%n_strings_beta_p1
+   do p=1,dane%n_beta+1
+      temp_state1 = dane%beta_annihilation_matrix_p1(dane%str_b_p1(j,p),j,1)
       if (temp_state1 .ne. 0) then
-         temp_sign1 = beta_annihilation_matrix_p1(strings_beta_p1(j,p),j,2)
-         do k=1,n_strings_alpha
-            do q=1,n_alpha
-               temp_state2 = alpha_annihilation_matrix(strings_alpha(k,q),k,1)
+         temp_sign1 = dane%beta_annihilation_matrix_p1(dane%str_b_p1(j,p),j,2)
+         do k=1,dane%n_strings_alpha
+            do q=1,dane%n_alpha
+               temp_state2 = dane%alpha_annihilation_matrix(dane%str_a(k,q),k,1)
                if (temp_state2 .ne. 0) then
-                  temp_sign2 = temp_sign1*alpha_annihilation_matrix(strings_alpha(k,q),k,2)
-                  new_table3(temp_state2,j) = new_table3(temp_state2,j) + temp_sign2*conjg(hso_ab(strings_alpha(k,q),strings_beta_p1(j,p)))*temp_table1(k,temp_state1)*(-1)**(n_alpha-1)
+                  temp_sign2 = temp_sign1*dane%alpha_annihilation_matrix(dane%str_a(k,q),k,2)
+                  new_table3(temp_state2,j) = new_table3(temp_state2,j) + temp_sign2*conjg(dane%hso_ab(dane%str_a(k,q),dane%str_b_p1(j,p)))*temp_table1(k,temp_state1)*(-1)**(dane%n_alpha-1)
                end if
             end do
          end do
@@ -962,53 +990,54 @@ do j=1,n_strings_beta_p1
    end do
 end do
 
-do i=1,n_strings_alpha
-   mu = (i-1)*n_strings_beta+1
-   do j=1,n_strings_beta
+do i=1,dane%n_strings_alpha
+   mu = (i-1)*dane%n_strings_beta+1
+   do j=1,dane%n_strings_beta
       vector_new_1(mu) = vector_new_1(mu) + new_table1(i,j)
       mu = mu + 1
    end do
 end do
 
-do i=1,n_strings_alpha_p1
-   mu = (i-1)*n_strings_beta_m1+1
-   do j=1,n_strings_beta_m1
+do i=1,dane%n_strings_alpha_p1
+   mu = (i-1)*dane%n_strings_beta_m1+1
+   do j=1,dane%n_strings_beta_m1
       vector_new_2(mu) = vector_new_2(mu) + new_table2(i,j)
       mu = mu + 1
    end do
 end do
 
-do i=1,n_strings_alpha_m1
-   mu = (i-1)*n_strings_beta_p1+1
-   do j=1,n_strings_beta_p1
+do i=1,dane%n_strings_alpha_m1
+   mu = (i-1)*dane%n_strings_beta_p1+1
+   do j=1,dane%n_strings_beta_p1
       vector_new_3(mu) = vector_new_3(mu) + new_table3(i,j)
       mu = mu + 1
    end do
 end do
-vector_new(1:size_tot(1,2)) = vector_new_1(:)
-vector_new(size_tot(2,1):size_tot(3,1)-1) = vector_new_2(:)
-vector_new(size_tot(3,1):size_tot(1,2)+size_tot(2,2)+size_tot(3,2)) = vector_new_3(:)
+vector_new(1:dane%size_tot(1,2)) = vector_new_1(:)
+vector_new(dane%size_tot(2,1):dane%size_tot(3,1)-1) = vector_new_2(:)
+vector_new(dane%size_tot(3,1):dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2)) = vector_new_3(:)
 
 end subroutine rel_matrix_vector_product
 
-subroutine matrix_vector_product(relativistic,alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,strings_alpha,n_strings_alpha,strings_alpha_p1,n_strings_alpha_p1,strings_alpha_m1,n_strings_alpha_m1,n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,strings_beta,n_strings_beta,strings_beta_p1,n_strings_beta_p1,strings_beta_m1,n_strings_beta_m1,n_beta,interaction_mix,hso_ab,hso_ba,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
-integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta, n_strings_alpha_p1,n_strings_beta_p1,n_strings_alpha_m1,n_strings_beta_m1
-integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-integer, intent (in) :: alpha_annihilation_creation_matrix_p1(norb,norb,n_strings_alpha_p1,2), beta_annihilation_creation_matrix_p1(norb,norb,n_strings_beta_p1,2), strings_alpha_p1(n_strings_alpha_p1,n_alpha+1), strings_beta_p1(n_strings_beta_p1,n_beta+1)
-integer, intent (in) :: alpha_annihilation_creation_matrix_m1(norb,norb,n_strings_alpha_m1,2), beta_annihilation_creation_matrix_m1(norb,norb,n_strings_beta_m1,2), strings_alpha_m1(n_strings_alpha_m1,n_alpha-1), strings_beta_m1(n_strings_beta_m1,n_beta-1)
-integer, intent (in) :: alpha_annihilation_matrix(norb,n_strings_alpha,2),beta_annihilation_matrix(norb,n_strings_beta,2),alpha_annihilation_matrix_p1(norb,n_strings_alpha_p1,2),beta_annihilation_matrix_p1(norb,n_strings_beta_p1,2)
-integer, intent (in) :: size_tot(3,2)
-complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb),hso_ab(norb,norb),hso_ba(norb,norb),vector(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
-complex, intent (in) :: alpha_hamiltonian_p1(n_strings_alpha_p1,n_strings_alpha_p1), beta_hamiltonian_p1(n_strings_beta_p1,n_strings_beta_p1)
-complex, intent (in) :: alpha_hamiltonian_m1(n_strings_alpha_m1,n_strings_alpha_m1), beta_hamiltonian_m1(n_strings_beta_m1,n_strings_beta_m1)
-logical, intent (in) :: relativistic
-complex, intent (inout) :: vector_new(n_strings_alpha*n_strings_beta+n_strings_alpha_p1*n_strings_beta_m1+n_strings_alpha_m1*n_strings_beta_p1)
-   if (relativistic .eqv. .true.) then
-      call rel_matrix_vector_product(alpha_hamiltonian,alpha_hamiltonian_p1,alpha_hamiltonian_m1,strings_alpha,n_strings_alpha,strings_alpha_p1,n_strings_alpha_p1,strings_alpha_m1,n_strings_alpha_m1,n_alpha,beta_hamiltonian,beta_hamiltonian_p1,beta_hamiltonian_m1,strings_beta,n_strings_beta,strings_beta_p1,n_strings_beta_p1,strings_beta_m1,n_strings_beta_m1,n_beta,interaction_mix,hso_ab,hso_ba,norb,alpha_annihilation_creation_matrix,alpha_annihilation_creation_matrix_p1,alpha_annihilation_creation_matrix_m1,beta_annihilation_creation_matrix,beta_annihilation_creation_matrix_p1,beta_annihilation_creation_matrix_m1,alpha_annihilation_matrix,alpha_annihilation_matrix_p1,beta_annihilation_matrix,beta_annihilation_matrix_p1,size_tot,vector,vector_new)
-   else
-      call nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-   end if
-end subroutine matrix_vector_product
+  subroutine matrix_vector_product(dane, vector, vector_new)
+    implicit none
+    type(t_params), intent(inout) :: dane
+    complex, intent(in) :: vector(:)
+    complex, intent(inout) :: vector_new(:)
+    !integer, intent(in) :: n
+    !n = dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2)
+
+    if (dane%relativistic) then
+      ! Wywołanie Twojej rutyny relatywistycznej
+      call rel_matrix_vector_product(dane, vector, vector_new)
+    else
+      ! Wywołanie Twojej rutyny nierelatywistycznej
+      call nr_matrix_vector_product(dane%alpha_hamiltonian, dane%str_a, dane%n_strings_alpha, dane%n_alpha, dane%beta_hamiltonian, dane%str_b, dane%n_strings_beta, dane%n_beta, dane%interaction_mix, dane%norb, dane%alpha_annihilation_creation_matrix, dane%beta_annihilation_creation_matrix, vector, vector_new)
+    end if
+  end subroutine matrix_vector_product
+
+
+
 
 subroutine generate_diagonal_elements(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,diagonal)
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
@@ -1143,6 +1172,14 @@ end subroutine fill_creation_results
 
 
 
+
+
+
+
+
+
+
+end module library_rel_ed
 
 
 
