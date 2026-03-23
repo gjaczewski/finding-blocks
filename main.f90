@@ -1,5 +1,4 @@
 program main
-use slepc
 use library_rel_ed
 implicit none
 type(t_params), target :: dane
@@ -13,17 +12,11 @@ integer :: i, j, temp, n_distributions_alpha,n_distributions_beta, n_distributio
 integer :: max,n_combinations
 integer, allocatable :: all_combinations(:,:)
 integer:: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2)
-complex, allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alpha(:,:,:,:),interaction_beta(:,:,:,:)
+complex(8), allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alpha(:,:,:,:),interaction_beta(:,:,:,:)
 complex(8), allocatable :: vector(:),vector_new(:)
 real, allocatable :: diagonal(:)
 real :: start_time, end_time
 real :: total_time
-! Zmienne SLEPc/PETSc
-type(tMat)     :: A
-type(tEPS)            :: eps
-PetscInt :: n  ! Rozmiar problemu
-integer:: ierr
-
 call cpu_time(start_time)
 
   !********* INPUT **********
@@ -299,36 +292,15 @@ dane%n_strings_beta_p1 = sizeb(2,2)
 dane%n_strings_alpha_m1 = sizea(3,2)
 dane%n_strings_beta_m1 = sizeb(3,2)
 dane%relativistic = relativistic
-n = dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2)
 
-call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
-
- call MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, n, PETSC_NULL_INTEGER, A, ierr)
-
- call MatShellSetContext(A, c_loc(dane), ierr)
 
 vector = [0,0,0,1]
 vector_new(:) = 0
 call matrix_vector_product(dane,vector,vector_new)
 
-call MatShellSetOperation(A, MATOP_MULT, MyMatMult, ierr)
 
-call EPSCreate(PETSC_COMM_WORLD, eps, ierr)
-call EPSSetOperators(eps, A, PETSC_NULL_MAT, ierr)
-call EPSSetProblemType(eps, EPS_HEP, ierr)
 
-! Ustawiamy metodę Davidsona
-    call EPSSetType(eps, EPSDAVIDSON, ierr) 
-
-    ! Rozwiązujemy
-    call EPSSolve(eps, ierr)
-
-    ! Sprzątamy
-    call EPSDestroy(eps, ierr)
-    call MatDestroy(A, ierr)
-    call SlepcFinalize(ierr)
-
-!write(*,*) vector_new
+write(*,*) vector_new
 
 
 

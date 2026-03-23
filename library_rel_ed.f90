@@ -1,9 +1,4 @@
 module library_rel_ed
-use petsc
-use slepc
-use iso_c_binding
-implicit none
-
 type :: t_params
     sequence
     integer :: n_strings_alpha, n_strings_beta, norb
@@ -24,13 +19,15 @@ type :: t_params
     integer, allocatable :: alpha_annihilation_matrix_p1(:,:,:)
     integer, allocatable :: beta_annihilation_matrix_p1(:,:,:)
     integer :: size_tot(3,2)
-    complex, allocatable :: alpha_hamiltonian(:,:), beta_hamiltonian(:,:)
-    complex, allocatable :: interaction_mix(:,:,:,:), hso_ab(:,:), hso_ba(:,:)
-    complex, allocatable :: alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:)
-    complex, allocatable :: alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
+    complex(8), allocatable :: alpha_hamiltonian(:,:), beta_hamiltonian(:,:)
+    complex(8), allocatable :: interaction_mix(:,:,:,:), hso_ab(:,:), hso_ba(:,:)
+    complex(8), allocatable :: alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:)
+    complex(8), allocatable :: alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
     logical :: relativistic
 end type t_params
+
 contains
+
 subroutine check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
 
   implicit none
@@ -114,7 +111,7 @@ end subroutine check_orbital_space_declarations
 subroutine check_hamiltonian(relativistic,norb,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix,hso_ab,hso_ba)
 logical :: relativistic
 integer, intent(in) :: norb
-complex, intent(in) :: hopping_alpha(norb,norb),hopping_beta(norb,norb), interaction_alpha(norb,norb,norb,norb), interaction_beta(norb,norb,norb,norb),interaction_mix(norb,norb,norb,norb),hso_ab(norb,norb),hso_ba(norb,norb)
+complex(8), intent(in) :: hopping_alpha(norb,norb),hopping_beta(norb,norb), interaction_alpha(norb,norb,norb,norb), interaction_beta(norb,norb,norb,norb),interaction_mix(norb,norb,norb,norb),hso_ab(norb,norb),hso_ba(norb,norb)
 integer :: i,j,k,l
 do i=1,norb
    do j=1,norb
@@ -794,8 +791,8 @@ end subroutine fill_annihilation_creation_matrix
 subroutine fill_nr_single_spin_hamiltonian(spin_strings,n_spin_strings,n_spin,norb,hopping,interaction,spin_annihilation_creation_matrix,spin_nr_hamiltonian)
 integer, intent(in) :: n_spin_strings,n_spin,norb
 integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_annihilation_creation_matrix(norb,norb,n_spin_strings,2)
-complex, intent(in) :: hopping(norb,norb), interaction(norb,norb,norb,norb)
-complex, intent(out) :: spin_nr_hamiltonian(n_spin_strings,n_spin_strings)
+complex(8), intent(in) :: hopping(norb,norb), interaction(norb,norb,norb,norb)
+complex(8), intent(out) :: spin_nr_hamiltonian(n_spin_strings,n_spin_strings)
 integer :: j,p,q,r,s, temp_state1,temp_state2,temp_sign1,temp_sign2
 if (n_spin .gt. 0) then
 do j=1,n_spin_strings
@@ -828,9 +825,9 @@ end subroutine fill_nr_single_spin_hamiltonian
 subroutine nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
 integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb)
+complex(8), intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb)
 complex(8), intent (inout) :: vector_new(n_strings_alpha*n_strings_beta),vector(n_strings_alpha*n_strings_beta)
-complex :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
+complex(8) :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
 integer :: mu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
 new_table(:,:) = 0
 do i=1,n_strings_alpha
@@ -1045,10 +1042,10 @@ end subroutine rel_matrix_vector_product
 subroutine generate_diagonal_elements(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,diagonal)
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
 integer, intent (in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-complex, intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb)
+complex(8), intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb)
 real, intent(out) :: diagonal(n_strings_alpha*n_strings_beta)
 integer :: mu,i,j,p,q
-complex :: temp_diagonal(n_strings_alpha*n_strings_beta)
+complex(8) :: temp_diagonal(n_strings_alpha*n_strings_beta)
 do mu=1,n_strings_alpha*n_strings_beta
    i = (mu-1)/n_strings_beta+1
    j = mod(mu-1,n_strings_beta)+1
@@ -1173,63 +1170,5 @@ do i=1,n_spin_strings
 end do
 end subroutine fill_creation_results
 
-
-
-
-
-
-
-
-
-subroutine MyMatMult(A, x, y, ierr)
-         use petsc 
-         use slepc
-         implicit none
-        type(tMat) :: A
-        type(tVec) :: x, y
-        integer :: ierr
-        
-        type(c_ptr) :: ctx_ptr
-        type(t_params), pointer :: params
-        
-        ! Wskaźniki na jednowymiarowe tablice Fortranowe
-     complex(kind=8), pointer :: x_array(:)
-    complex(kind=8), pointer :: y_array(:)
-        
-        ! 1. Pobieramy wskaźnik C z macierzy A i konwertujemy na Twoje dane
-        call MatShellGetContext(A, ctx_ptr, ierr)
-        call c_f_pointer(ctx_ptr, params)
-        
-        ! 2. WYCIĄGAMY TABLICE Z WEKTORÓW PETSc
-        ! x_array to wektor wejściowy (tylko do odczytu)
-        call VecGetArrayRead_F90(x, x_array, ierr)
-        ! y_array to wektor wyjściowy (do zapisu wyniku)
-        call VecGetArray_F90(y, y_array, ierr)
-        
-        ! ==================================================================
-        ! 3. TUTAJ WCHODZI TWOJA RUTYNA MNOŻĄCA!
-        ! ==================================================================
-        ! Wywołujesz swój stary, sprawdzony kod Fortranowy, podając mu 
-        ! wyciągnięte przed chwilą tablice i zmienne z Twojej struktury.
-        
-        ! Przykład wywołania:
-
-          call matrix_vector_product(params,x_array,y_array)
-
-        
-        ! ==================================================================
-        
-        ! 4. ODDAJEMY TABLICE DO PETSc (KRYTYCZNY KROK)
-        ! Jeśli tego nie zrobisz, program wycieknie pamięć lub się zawiesi
-        call VecRestoreArrayRead_F90(x, x_array, ierr)
-        call VecRestoreArray_F90(y, y_array, ierr)
-        
-        ierr = 0
-        write(*,*) "OK"
-    end subroutine MyMatMult
 end module library_rel_ed
-
-
-
-
 
