@@ -1,17 +1,17 @@
 EXEC = main
 
-OBJS = library_rel_ed.o modul_solvera.o main.o
+OBJS = library_rel_ed.o module_for_slepc.o main.o
 
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_variables
 
 
-${EXEC}: ${OBJS} 
+${EXEC}: ${OBJS}
 	-${FLINKER} -o ${EXEC} ${OBJS} ${SLEPC_LIB}
-	${RM} ${OBJS}
+	${RM} ${OBJS} *.mod
 
 
-main.o: modul_solvera.o library_rel_ed.o
-modul_solvera.o: library_rel_ed.o
+main.o: module_for_slepc.o library_rel_ed.o
+module_for_slepc.o: library_rel_ed.o
 
 
 include ${SLEPC_DIR}/lib/slepc/conf/slepc_rules

@@ -2,7 +2,7 @@
 program main
 use slepceps
 use library_rel_ed
-use modul_solvera
+use module_for_slepc
 implicit none
 type(t_params), target, save :: dane
 integer:: n_alpha,n_beta,norb
@@ -20,7 +20,7 @@ complex(8), allocatable :: vector(:),vector_new(:)
 real(8), allocatable, target, save :: diagonal(:)
 integer :: N
 integer              :: nconv
-integer :: liczba_wartosci = 4
+integer :: liczba_wartosci = 6
 PetscScalar          :: wartosc_rzeczywista, wartosc_urojona
 Vec                  :: wektor_petsc, wektor_urojony_petsc
 PetscScalar, pointer :: tablica_wynikowa(:)
@@ -32,7 +32,7 @@ EPS            :: eps
 call cpu_time(start_time)
 call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
   !********* INPUT **********
-relativistic=.false.
+relativistic=.true.
   
 norb=2
 
@@ -67,16 +67,16 @@ hopping_beta = hopping_alpha
 interaction_alpha(:,:,:,:) = 0
 interaction_beta(:,:,:,:) = 0
 dane%interaction_mix(:,:,:,:) = 0
-dane%interaction_mix(1,1,1,1) = 0
-dane%interaction_mix(2,2,2,2) = 0
+dane%interaction_mix(1,1,1,1) = 8
+dane%interaction_mix(2,2,2,2) = 8
 allocate(dane%hso_ab(norb,norb))
 allocate(dane%hso_ba(norb,norb))
 if (relativistic .eqv. .true.) then
     dane%hso_ab(:,:) = 0
-    dane%hso_ab(1,2) = 0
-    dane%hso_ab(2,1) = 0
-    dane%hso_ab(1,1) = 0
-    dane%hso_ab(2,2) = 0
+    dane%hso_ab(1,2) = 3
+    dane%hso_ab(2,1) = 3
+    dane%hso_ab(1,1) = 2
+    dane%hso_ab(2,2) = 2
     dane%hso_ba = dane%hso_ab
 end if 
 !***********************
@@ -335,26 +335,20 @@ call EPSSetFromOptions(eps, ierr)
 call EPSSolve(eps, ierr)
 
 call EPSGetConverged(eps, nconv, ierr)
-print *, "Solver znalazl ", nconv, " zbieznych wartosci wlasnych."
+print *, "Solver found ", nconv, " convergent eigenvalues."
 call MatCreateVecs(A, wektor_petsc, wektor_urojony_petsc, ierr)
 
 do i = 0, nconv - 1
     
-    ! Wyciągamy i-tą parę z solvera do naszych pojemników
     call EPSGetEigenpair(eps, i, wartosc_rzeczywista, wartosc_urojona, &
                          wektor_petsc, wektor_urojony_petsc, ierr)
 
-    ! Wyświetlamy samą wartość własną (dla problemów symetrycznych część urojona to 0)
-    print *, "Wartosc wlasna nr", i + 1, "=", real(wartosc_rzeczywista)
+    print *, "Eigenvalue no.", i + 1, "=", real(wartosc_rzeczywista)
 
-    ! Wyciągamy surową tablicę Fortranową z wektora wektor_petsc
+
     call VecGetArrayRead(wektor_petsc, tablica_wynikowa, ierr)
 
-    ! >>> TUTAJ MOŻESZ ZROBIĆ Z WYNIKIEM CO CHCESZ <<<
-    ! tablica_wynikowa(1:N) zachowuje się teraz jak zwykły wektor Fortrana.
-    ! Możesz skopiować te wartości do swoich struktur z library_rel_ed.
-    
-    ! Zamykamy dostęp do tablicy (bardzo ważne!)
+
     call VecRestoreArrayRead(wektor_petsc, tablica_wynikowa, ierr)
 
   end do
@@ -374,13 +368,7 @@ nullify(ptr_dane)
 nullify(ptr_przekatna)
 
 
-vector = [1,0,0,0]
-vector_new(:) = 0
-call matrix_vector_product(dane,vector,vector_new)
 
-
-
-write(*,*) vector_new
 
 
 
