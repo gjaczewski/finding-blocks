@@ -115,12 +115,12 @@ complex(8), intent(in) :: hopping_alpha(norb,norb),hopping_beta(norb,norb), inte
 integer :: i,j,k,l
 do i=1,norb
    do j=1,norb
-      if (hopping_alpha(i,j) .ne. conjg(hopping_alpha(j,i))) then
+      if (abs(hopping_alpha(i,j)-conjg(hopping_alpha(j,i))) .gt. 1E-15) then
          write(*,*) "Hopping alpha is not hermitian"
          write(*,*) "QUITTING THE PROGRAM"
          STOP
       end if
-      if (hopping_beta(i,j) .ne. conjg(hopping_beta(j,i))) then
+      if (abs(hopping_beta(i,j)-conjg(hopping_beta(j,i))) .gt. 1E-15) then
          write(*,*) "Hopping beta is not hermitian"
          write(*,*) "QUITTING THE PROGRAM"
          STOP
@@ -134,17 +134,17 @@ do i=1,norb
       end if
       do k=1,norb
          do l=1,norb
-            if ((interaction_mix(i,j,k,l) .ne. conjg(interaction_mix(k,l,i,j))) .or. (interaction_mix(i,j,k,l) .ne. interaction_mix(j,i,l,k))) then
+            if ((abs(interaction_mix(i,j,k,l)-conjg(interaction_mix(k,l,i,j))) .gt. 1E-15 ) .or. (abs(interaction_mix(i,j,k,l)-interaction_mix(j,i,l,k)) .gt. 1E-15 )) then
                write(*,*) "Mixed interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
             end if
-            if ((interaction_alpha(i,j,k,l) .ne. conjg(interaction_alpha(k,l,i,j))) .or. (interaction_alpha(i,j,k,l) .ne. interaction_alpha(j,i,l,k))) then
+            if ((abs(interaction_alpha(i,j,k,l)-conjg(interaction_alpha(k,l,i,j))) .gt. 1E-15) .or. (abs(interaction_alpha(i,j,k,l)-interaction_alpha(j,i,l,k)) .gt. 1E-15)) then
                write(*,*) "Alpha interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
             end if
-            if ((interaction_beta(i,j,k,l) .ne. conjg(interaction_beta(k,l,i,j))) .or. (interaction_beta(i,j,k,l) .ne. interaction_beta(j,i,l,k))) then
+            if ((abs(interaction_beta(i,j,k,l)-conjg(interaction_beta(k,l,i,j))) .gt. 1E-15) .or. (abs(interaction_beta(i,j,k,l)-interaction_beta(j,i,l,k)) .gt. 1E-15)) then
                write(*,*) "Beta interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
@@ -430,10 +430,10 @@ integer :: i,k
 end subroutine bin_coeff
 
 
-  subroutine fill_spin_strings(n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s)
+  subroutine fill_spin_strings(orbital_energies,norb,n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s)
   
   implicit none
-  integer, intent(in):: n_s
+  integer, intent(in):: n_s, norb
   integer, intent(in):: n_RAS_spaces_occ,n_RAS_spaces_virt,active_space
   integer, intent(in):: RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt)
   integer, intent(in):: range1,range2
@@ -441,6 +441,7 @@ end subroutine bin_coeff
   integer, intent(in):: RAS_el_array_spin(NRD_spin,n_RAS_spaces_occ+n_RAS_spaces_virt+1)
   integer, intent(in)::sizes
   integer, intent(inout)::str_s(sizes,n_s)
+  real, intent(inout) :: orbital_energies(norb)
   integer :: space_sizes(n_RAS_spaces_occ+1+n_RAS_spaces_virt)
   integer, allocatable :: str_temp(:,:)
   integer, allocatable :: another_str_temp(:,:)
@@ -542,7 +543,7 @@ end subroutine bin_coeff
    deallocate(another_str_temp)
 
    end do
-   call sort_states(str_s,sizes,n_s)
+   call sort_states(orbital_energies,norb,str_s,sizes,n_s)
 end subroutine fill_spin_strings
 
 
@@ -623,10 +624,11 @@ subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_
 end subroutine string_direct_product
 
 
-subroutine sort_states(spin_strings,n_spin_strings,n_spin)
+subroutine sort_states(orbital_energies,norb,spin_strings,n_spin_strings,n_spin)
 implicit none
-integer, intent(in) :: n_spin_strings,n_spin
+integer, intent(in) :: n_spin_strings,n_spin,norb
 integer, intent(inout) :: spin_strings(n_spin_strings,n_spin)
+real, intent(in) :: orbital_energies(norb)
 real :: temp_array(n_spin_strings), temp_energy
 integer :: i,j
 integer :: temp_state(n_spin)
@@ -634,7 +636,7 @@ if (n_spin_strings .ge. 2) then
 temp_array(:) = 0
 do i=1,n_spin_strings
    do j=1,n_spin
-      temp_array(i) = temp_array(i) - 1/(real(spin_strings(i,j)))**2  
+      temp_array(i) = temp_array(i) + orbital_energies(spin_strings(i,j))
    end do
 end do
 do i = 1, n_spin_strings-1

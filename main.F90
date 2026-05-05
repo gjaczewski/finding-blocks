@@ -11,12 +11,14 @@ integer, dimension(:), allocatable:: RAS_space_occ,RAS_space_virt,excit_array
 integer, dimension(:,:), allocatable:: RAS_el_array_alpha,RAS_el_array_beta
 logical:: relativistic
 integer :: NRD_spin_alpha, NRD_spin_beta
-integer :: i, j, temp, n_distributions_alpha,n_distributions_beta, n_distributions_alpha_p1,n_distributions_beta_p1, n_distributions_alpha_m1,n_distributions_beta_m1
+integer :: i, j,k,l,p,q, temp, n_distributions_alpha,n_distributions_beta, n_distributions_alpha_p1,n_distributions_beta_p1, n_distributions_alpha_m1,n_distributions_beta_m1
 integer :: max,n_combinations
 integer, allocatable :: all_combinations(:,:)
 integer:: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2)
 complex(8), allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alpha(:,:,:,:),interaction_beta(:,:,:,:)
+complex(8), allocatable :: interaction_temp(:,:)
 complex(8), allocatable :: vector(:),vector_new(:)
+real, allocatable :: orbital_energies(:)
 real(8), allocatable, target, save :: diagonal(:)
 integer :: N
 integer              :: nconv
@@ -32,7 +34,7 @@ EPS            :: eps
 call cpu_time(start_time)
 call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
   !********* INPUT **********
-relativistic=.true.
+relativistic=.false.
   
 norb=2
 
@@ -52,33 +54,65 @@ active_space=2
 !RAS_space_virt(1)=2
 !RAS_space_virt(2)=0
 excit_array(:)=1
-  
+
+allocate(orbital_energies(norb))
+allocate(interaction_temp(norb**2,norb**2))
 allocate(hopping_alpha(norb,norb))
 allocate(hopping_beta(norb,norb))
 allocate(dane%interaction_mix(norb,norb,norb,norb))
 allocate(interaction_alpha(norb,norb,norb,norb))
 allocate(interaction_beta(norb,norb,norb,norb))
-hopping_alpha(:,:) = 0
-hopping_alpha(1,1) = 5
-hopping_alpha(2,2) = 5
-hopping_alpha(1,2) = -1
-hopping_alpha(2,1) = -1
-hopping_beta = hopping_alpha
-interaction_alpha(:,:,:,:) = 0
-interaction_beta(:,:,:,:) = 0
-dane%interaction_mix(:,:,:,:) = 0
-dane%interaction_mix(1,1,1,1) = 8
-dane%interaction_mix(2,2,2,2) = 8
 allocate(dane%hso_ab(norb,norb))
 allocate(dane%hso_ba(norb,norb))
-if (relativistic .eqv. .true.) then
-    dane%hso_ab(:,:) = 0
-    dane%hso_ab(1,2) = 3
-    dane%hso_ab(2,1) = 3
-    dane%hso_ab(1,1) = 2
-    dane%hso_ab(2,2) = 2
-    dane%hso_ba = dane%hso_ab
-end if 
+open(unit = 1, file = "mo_energies.txt")
+open(unit = 2, file = "h_mo.txt")
+open(unit = 3, file = "eri_mo.txt")
+do i=1,norb 
+    read(1,*) orbital_energies(i)
+    read(2,*) hopping_alpha(i,:)
+end do
+
+do i=1,norb**2
+    read(3,*) interaction_temp(i,:)
+end do
+
+hopping_beta = hopping_alpha
+
+p = 1
+do i=1,norb
+    do j=1,norb
+        q = 1
+        do k=1,norb
+            do l=1,norb
+                interaction_alpha(i,j,k,l) = interaction_temp(p,q)
+                q = q + 1
+            end do
+        end do
+        p = p + 1
+    end do
+end do
+
+interaction_beta = interaction_alpha
+dane%interaction_mix = interaction_alpha
+!hopping_alpha(:,:) = 0
+!hopping_alpha(1,1) = 5
+!hopping_alpha(2,2) = 5
+!hopping_alpha(1,2) = -1
+!hopping_alpha(2,1) = -1
+!hopping_beta = hopping_alpha
+!interaction_alpha(:,:,:,:) = 0
+!interaction_beta(:,:,:,:) = 0
+!dane%interaction_mix(:,:,:,:) = 0
+!dane%interaction_mix(1,1,1,1) = 8
+!dane%interaction_mix(2,2,2,2) = 8
+!if (relativistic .eqv. .true.) then
+!    dane%hso_ab(:,:) = 0
+!    dane%hso_ab(1,2) = 3
+!    dane%hso_ab(2,1) = 3
+!    dane%hso_ab(1,1) = 2
+!    dane%hso_ab(2,2) = 2
+!    dane%hso_ba = dane%hso_ab
+!end if 
 !***********************
 !here we check if input is ok 
 
@@ -165,7 +199,7 @@ end if
 
 if (n_alpha .gt. 0)  then
   allocate(dane%str_a(sizea(1,2),n_alpha))
-  call fill_spin_strings(n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),dane%str_a)
+  call fill_spin_strings(orbital_energies,norb,n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),dane%str_a)
 else if (n_alpha .eq. 0)  then
   allocate(dane%str_a(sizea(1,2),1))
   dane%str_a(sizea(1,2),:) = 0 !vacuum  
@@ -173,7 +207,7 @@ end if
 
 if (n_beta .gt. 0) then
   allocate(dane%str_b(sizeb(1,2),n_beta))
-  call fill_spin_strings(n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),dane%str_b)
+  call fill_spin_strings(orbital_energies,norb,n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),dane%str_b)
 else if  (n_beta .eq. 0)  then
   allocate(dane%str_b(sizeb(1,2),1))
   dane%str_b(sizeb(1,2),:) = 0 !vacuum  
@@ -212,7 +246,7 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     if (n_alpha .gt. 1)  then
         allocate(dane%str_a_m1(sizea(3,2),n_alpha-1))
         if (sizea(3,2) .ne. 0) then
-            call fill_spin_strings(n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),dane%str_a_m1)
+            call fill_spin_strings(orbital_energies,norb,n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),dane%str_a_m1)
         end if
     else if (n_alpha .eq. 1) then
         allocate(dane%str_a_m1(sizea(3,2),1))
@@ -224,7 +258,7 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     if (n_beta .gt. 1)  then
         allocate(dane%str_b_m1(sizeb(3,2),n_beta-1))
         if (sizeb(3,2) .ne. 0) then
-            call fill_spin_strings(n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),dane%str_b_m1)
+            call fill_spin_strings(orbital_energies,norb,n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),dane%str_b_m1)
         end if
     else if (n_beta .eq. 1) then
         allocate(dane%str_b_m1(sizeb(3,2),1))
@@ -235,12 +269,12 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     
     allocate(dane%str_a_p1(sizea(2,2),n_alpha+1))
     if (sizea(2,2) .ne. 0) then
-     call fill_spin_strings(n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),dane%str_a_p1)
+     call fill_spin_strings(orbital_energies,norb,n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),dane%str_a_p1)
     end if
       
     allocate(dane%str_b_p1(sizeb(2,2),n_beta+1)) 
     if (sizeb(2,2) .ne. 0) then
-        call fill_spin_strings(n_beta+1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(2,1),NRDb(2,2),sizeb(2,2),dane%str_b_p1)
+        call fill_spin_strings(orbital_energies,norb,n_beta+1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(2,1),NRDb(2,2),sizeb(2,2),dane%str_b_p1)
     end if
 
 !here we generate annihilation, creation-annihilation and single spin hamiltonians
@@ -271,7 +305,7 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     allocate(dane%alpha_hamiltonian_p1(sizea(2,2),sizea(2,2)))
     
     if (sizea(2,2) .ne. 0) then
-        call fill_spin_strings(n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),dane%str_a_p1)
+        call fill_spin_strings(orbital_energies,norb,n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),dane%str_a_p1)
         call fill_annihilation_results(sizea(1,2),sizea(2,2),n_alpha+1,dane%str_a,dane%str_a_p1,norb,dane%alpha_annihilation_matrix_p1)
         call fill_annihilation_creation_matrix(n_alpha+1,sizea(2,2),dane%str_a_p1,norb,dane%alpha_annihilation_creation_matrix_p1)
         call fill_nr_single_spin_hamiltonian(dane%str_a_p1,sizea(2,2),n_alpha+1,norb,hopping_alpha,interaction_alpha,dane%alpha_annihilation_creation_matrix_p1,dane%alpha_hamiltonian_p1)
@@ -282,7 +316,7 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     allocate(dane%beta_hamiltonian_p1(sizeb(2,2),sizeb(2,2)))   
 
     if (sizeb(2,2) .ne. 0) then
-        call fill_spin_strings(n_beta+1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(2,1),NRDb(2,2),sizeb(2,2),dane%str_b_p1)
+        call fill_spin_strings(orbital_energies,norb,n_beta+1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(2,1),NRDb(2,2),sizeb(2,2),dane%str_b_p1)
         call fill_annihilation_results(sizeb(1,2),sizeb(2,2),n_beta+1,dane%str_b,dane%str_b_p1,norb,dane%beta_annihilation_matrix_p1)
         call fill_annihilation_creation_matrix(n_beta+1,sizeb(2,2),dane%str_b_p1,norb,dane%beta_annihilation_creation_matrix_p1)
         call fill_nr_single_spin_hamiltonian(dane%str_b_p1,sizeb(2,2),n_beta+1,norb,hopping_beta,interaction_beta,dane%beta_annihilation_creation_matrix_p1,dane%beta_hamiltonian_p1)
