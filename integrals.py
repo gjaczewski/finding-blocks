@@ -1,7 +1,7 @@
 from pyscf import gto, scf, ao2mo
 import numpy as np
 mol =gto.Mole()
-mol.build(atom='H 0 0 0; H 0 0 1.1', basis='sto-3g')
+mol.build(atom='O 0.000000  0.000000  0.000000; H 0.000000 -0.757000  0.587000; H 0.000000  0.757000  0.587000', basis='sto-3g', charge=0, spin=0)
 kin = mol.intor('int1e_kin')
 vnuc = mol.intor('int1e_nuc')
 overlap = mol.intor('int1e_ovlp')
@@ -19,7 +19,7 @@ h_mo = C.T @ h_ao @ C
 eri_mo = ao2mo.kernel(mol, C)
 
 norb = C.shape[1]
-
+print(norb)
 
 eri_mo = ao2mo.restore(1, eri_mo, norb)
 
@@ -38,7 +38,16 @@ with open('h_mo.txt', 'w') as f:
         f.write(line + '\n')
 np.savetxt("mo_energies.txt", energies,delimiter=",")
 n = h_mo.shape[0]
-eri_flat = eri_phys.reshape(n*n, n*n)
+eri_flat=np.zeros([norb**2,norb**2])
+p = 0
+for i in range(0,norb):
+    for j in range(0,norb):
+        q = 0
+        for k in range(0,norb):
+            for  l in range(0,norb):
+                eri_flat[p,q]=eri_phys[i,j,k,l]
+                q = q + 1
+        p = p + 1
 eri_flat = eri_flat + 0j
 real_eri_flat=eri_flat.real
 imag_eri_flat=eri_flat.imag

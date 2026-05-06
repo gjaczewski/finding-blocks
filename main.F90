@@ -22,7 +22,7 @@ real, allocatable :: orbital_energies(:)
 real(8), allocatable, target, save :: diagonal(:)
 integer :: N
 integer              :: nconv
-integer :: liczba_wartosci = 6
+integer :: liczba_wartosci = 10
 PetscScalar          :: wartosc_rzeczywista, wartosc_urojona
 Vec                  :: wektor_petsc, wektor_urojony_petsc
 PetscScalar, pointer :: tablica_wynikowa(:)
@@ -36,10 +36,10 @@ call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
   !********* INPUT **********
 relativistic=.false.
   
-norb=2
+norb=7
 
-n_alpha=1
-n_beta=1
+n_alpha=5
+n_beta=5
   
 n_RAS_spaces_occ=0
 n_RAS_spaces_virt=0
@@ -50,7 +50,7 @@ allocate(excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt))
 
 !RAS_space_occ(1)=2
 !RAS_space_occ(2)=0
-active_space=2
+active_space=norb
 !RAS_space_virt(1)=2
 !RAS_space_virt(2)=0
 excit_array(:)=1
@@ -76,14 +76,13 @@ do i=1,norb**2
     read(3,*) interaction_temp(i,:)
 end do
 
-hopping_beta = hopping_alpha
-
 p = 1
 do i=1,norb
     do j=1,norb
         q = 1
         do k=1,norb
             do l=1,norb
+                write(*,*) i,j,k,l,p,q,interaction_temp(p,q)
                 interaction_alpha(i,j,k,l) = interaction_temp(p,q)
                 q = q + 1
             end do
@@ -92,6 +91,7 @@ do i=1,norb
     end do
 end do
 
+hopping_beta = hopping_alpha
 interaction_beta = interaction_alpha
 dane%interaction_mix = interaction_alpha
 !hopping_alpha(:,:) = 0
@@ -367,7 +367,6 @@ call EPSSetFromOptions(eps, ierr)
   
   
 call EPSSolve(eps, ierr)
-
 call EPSGetConverged(eps, nconv, ierr)
 print *, "Solver found ", nconv, " convergent eigenvalues."
 call MatCreateVecs(A, wektor_petsc, wektor_urojony_petsc, ierr)

@@ -115,12 +115,12 @@ complex(8), intent(in) :: hopping_alpha(norb,norb),hopping_beta(norb,norb), inte
 integer :: i,j,k,l
 do i=1,norb
    do j=1,norb
-      if (abs(hopping_alpha(i,j)-conjg(hopping_alpha(j,i))) .gt. 1E-15) then
+      if (abs(hopping_alpha(i,j)-conjg(hopping_alpha(j,i))) .gt. 1E-10) then
          write(*,*) "Hopping alpha is not hermitian"
          write(*,*) "QUITTING THE PROGRAM"
          STOP
       end if
-      if (abs(hopping_beta(i,j)-conjg(hopping_beta(j,i))) .gt. 1E-15) then
+      if (abs(hopping_beta(i,j)-conjg(hopping_beta(j,i))) .gt. 1E-10) then
          write(*,*) "Hopping beta is not hermitian"
          write(*,*) "QUITTING THE PROGRAM"
          STOP
@@ -134,17 +134,17 @@ do i=1,norb
       end if
       do k=1,norb
          do l=1,norb
-            if ((abs(interaction_mix(i,j,k,l)-conjg(interaction_mix(k,l,i,j))) .gt. 1E-15 ) .or. (abs(interaction_mix(i,j,k,l)-interaction_mix(j,i,l,k)) .gt. 1E-15 )) then
+            if ((abs(interaction_mix(i,j,k,l)-conjg(interaction_mix(k,l,i,j))) .gt. 1E-10 ) .or. (abs(interaction_mix(i,j,k,l)-interaction_mix(j,i,l,k)) .gt. 1E-10 )) then
                write(*,*) "Mixed interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
             end if
-            if ((abs(interaction_alpha(i,j,k,l)-conjg(interaction_alpha(k,l,i,j))) .gt. 1E-15) .or. (abs(interaction_alpha(i,j,k,l)-interaction_alpha(j,i,l,k)) .gt. 1E-15)) then
+            if ((abs(interaction_alpha(i,j,k,l)-conjg(interaction_alpha(k,l,i,j))) .gt. 1E-10) .or. (abs(interaction_alpha(i,j,k,l)-interaction_alpha(j,i,l,k)) .gt. 1E-10)) then
                write(*,*) "Alpha interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
             end if
-            if ((abs(interaction_beta(i,j,k,l)-conjg(interaction_beta(k,l,i,j))) .gt. 1E-15) .or. (abs(interaction_beta(i,j,k,l)-interaction_beta(j,i,l,k)) .gt. 1E-15)) then
+            if ((abs(interaction_beta(i,j,k,l)-conjg(interaction_beta(k,l,i,j))) .gt. 1E-10) .or. (abs(interaction_beta(i,j,k,l)-interaction_beta(j,i,l,k)) .gt. 1E-10)) then
                write(*,*) "Beta interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
