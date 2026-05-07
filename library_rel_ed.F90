@@ -116,6 +116,7 @@ integer :: i,j,k,l
 do i=1,norb
    do j=1,norb
       if (abs(hopping_alpha(i,j)-conjg(hopping_alpha(j,i))) .gt. 1E-10) then
+         write(*,*) i,j,hopping_alpha(i,j), conjg(hopping_alpha(j,i)),hopping_alpha(i,j)-conjg(hopping_alpha(j,i))
          write(*,*) "Hopping alpha is not hermitian"
          write(*,*) "QUITTING THE PROGRAM"
          STOP
@@ -126,7 +127,7 @@ do i=1,norb
          STOP
       end if
       if (relativistic .eqv. .true.) then
-         if (hso_ab(i,j) .ne. conjg(hso_ba(j,i))) then
+         if (abs(hso_ab(i,j)-conjg(hso_ba(j,i))) .gt. 1E-10) then
             write(*,*) "Spin orbit hamiltonian is not hermitian"
             write(*,*) "QUITTING THE PROGRAM"
             STOP

@@ -34,12 +34,12 @@ EPS            :: eps
 call cpu_time(start_time)
 call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
   !********* INPUT **********
-relativistic=.false.
+relativistic=.true.
   
-norb=7
+norb=6
 
-n_alpha=5
-n_beta=5
+n_alpha=2
+n_beta=2
   
 n_RAS_spaces_occ=0
 n_RAS_spaces_virt=0
@@ -65,11 +65,17 @@ allocate(interaction_beta(norb,norb,norb,norb))
 allocate(dane%hso_ab(norb,norb))
 allocate(dane%hso_ba(norb,norb))
 open(unit = 1, file = "mo_energies.txt")
-open(unit = 2, file = "h_mo.txt")
+open(unit = 2, file = "h_upup.txt")
+open(unit = 4, file = "h_dndn.txt")
 open(unit = 3, file = "eri_mo.txt")
+open(unit = 5, file = "h_updn.txt")
+open(unit = 7, file = "h_dnup.txt")
 do i=1,norb 
     read(1,*) orbital_energies(i)
     read(2,*) hopping_alpha(i,:)
+    read(4,*) hopping_beta(i,:)
+    read(5,*) dane%hso_ab(i,:)
+    read(7,*) dane%hso_ba(i,:)
 end do
 
 do i=1,norb**2
@@ -81,8 +87,7 @@ do i=1,norb
     do j=1,norb
         q = 1
         do k=1,norb
-            do l=1,norb
-                write(*,*) i,j,k,l,p,q,interaction_temp(p,q)
+            do l=1,norb 
                 interaction_alpha(i,j,k,l) = interaction_temp(p,q)
                 q = q + 1
             end do
@@ -91,7 +96,6 @@ do i=1,norb
     end do
 end do
 
-hopping_beta = hopping_alpha
 interaction_beta = interaction_alpha
 dane%interaction_mix = interaction_alpha
 !hopping_alpha(:,:) = 0
