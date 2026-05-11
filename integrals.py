@@ -1,35 +1,37 @@
 from pyscf import gto, scf, ao2mo
 import numpy as np
-mol =gto.Mole()
-mol.build(atom='Li 0.000000  0.000000  0.000000; H 1.000000 0.000000  0.000000', basis='sto-3g', charge=0, spin=0)
+mol = gto.M(atom = 'O 0.000000 0.000000 0.000000',basis='sto-3g',spin=0,charge=0)
 kin = mol.intor('int1e_kin')
 vnuc = mol.intor('int1e_nuc')
 overlap = mol.intor('int1e_ovlp')
 eri = mol.intor('int2e')
-relativistic = True
+relativistic = False
 mf = scf.RHF(mol)
 mf.kernel()
+
+c = 137.035999084
+soc_prefactor = 1.0 / (2.0 * c**2)
 
 C = mf.mo_coeff   
 
 h_ao = kin + vnuc
 
-h_mo = C.T @ h_ao @ C + 0j
+h_mo = C.conj().T @ h_ao @ C + 0j
 
 
 if relativistic:
     soc_ao = mol.intor('int1e_pnucxp', comp=3)
-    soc_mo = np.einsum('pi,xpq,qj->xij',C,soc_ao,C)
+    soc_mo = np.einsum('pi,xpq,qj->xij',C.conj(),soc_ao,C)
     #soc_ao[0] - > L_x
     #soc_ao[1] - > L_y
     #soc_ao[2] - > L_z
-    Lx = soc_mo[0]
-    Ly = soc_mo[1]
-    Lz = soc_mo[2]
+    Lx = -1j * soc_mo[0]*soc_prefactor
+    Ly = -1j * soc_mo[1]*soc_prefactor
+    Lz = -1j * soc_mo[2]*soc_prefactor
+
     h_upup = h_mo + 0.5 * Lz
     h_dndn = h_mo - 0.5 * Lz
-    print(Lz[0,3])
-    print(Lz[3,0])
+
     h_updn = 0.5 * (Lx - 1j * Ly) + 0j
     h_dnup = 0.5 * (Lx + 1j * Ly) + 0j
 else:
