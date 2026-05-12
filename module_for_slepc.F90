@@ -5,7 +5,7 @@ module module_for_slepc
   implicit none
 
   type(t_params), pointer :: ptr_dane
-  real(8), pointer       :: ptr_przekatna(:)
+  complex(8), pointer       :: ptr_przekatna(:)
   integer                :: n_rozmiar
 
    contains
@@ -16,11 +16,13 @@ module module_for_slepc
     PetscErrorCode :: ierr
     PetscScalar, pointer :: tablica_x(:), tablica_y(:)
 
+
     
     call VecGetArrayRead(x, tablica_x, ierr)
     call VecGetArray(y, tablica_y, ierr)
 
     call matrix_vector_product(ptr_dane, tablica_x, tablica_y)
+
 
     call VecRestoreArrayRead(x, tablica_x, ierr)
     call VecRestoreArray(y, tablica_y, ierr)

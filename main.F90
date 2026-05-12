@@ -19,10 +19,10 @@ complex(8), allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alph
 complex(8), allocatable :: interaction_temp(:,:)
 complex(8), allocatable :: vector(:),vector_new(:)
 real, allocatable :: orbital_energies(:)
-real(8), allocatable, target, save :: diagonal(:)
+complex(8), allocatable, target, save :: diagonal(:)
 integer :: N
 integer              :: nconv
-integer :: liczba_wartosci = 10
+integer :: liczba_wartosci = 1
 PetscScalar          :: wartosc_rzeczywista, wartosc_urojona
 Vec                  :: wektor_petsc, wektor_urojony_petsc
 PetscScalar, pointer :: tablica_wynikowa(:)
@@ -36,10 +36,10 @@ call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
   !********* INPUT **********
 relativistic=.true.
   
-norb=6
+norb=5
 
-n_alpha=2
-n_beta=2
+n_alpha=5
+n_beta=3
   
 n_RAS_spaces_occ=0
 n_RAS_spaces_virt=0
@@ -98,27 +98,7 @@ end do
 
 interaction_beta = interaction_alpha
 dane%interaction_mix = interaction_alpha
-!hopping_alpha(:,:) = 0
-!hopping_alpha(1,1) = 5
-!hopping_alpha(2,2) = 5
-!hopping_alpha(1,2) = -1
-!hopping_alpha(2,1) = -1
-!hopping_beta = hopping_alpha
-!interaction_alpha(:,:,:,:) = 0
-!interaction_beta(:,:,:,:) = 0
-!dane%interaction_mix(:,:,:,:) = 0
-!dane%interaction_mix(1,1,1,1) = 8
-!dane%interaction_mix(2,2,2,2) = 8
-!if (relativistic .eqv. .true.) then
-!    dane%hso_ab(:,:) = 0
-!    dane%hso_ab(1,2) = 3
-!    dane%hso_ab(2,1) = 3
-!    dane%hso_ab(1,1) = 2
-!    dane%hso_ab(2,2) = 2
-!    dane%hso_ba = dane%hso_ab
-!end if 
-!***********************
-!here we check if input is ok 
+
 
 call check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
 call check_hamiltonian(relativistic,norb,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,dane%interaction_mix,dane%hso_ab,dane%hso_ba)
@@ -365,12 +345,16 @@ call EPSSetProblemType(eps, EPS_HEP, ierr)
 call EPSSetType(eps,EPSJD, ierr)
   
   
-call EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL, ierr)
+call EPSSetWhichEigenpairs(eps, EPS_LARGEST_MAGNITUDE, ierr)
 call EPSSetDimensions(eps, liczba_wartosci, PETSC_DECIDE, PETSC_DECIDE, ierr)
 call EPSSetFromOptions(eps, ierr)
   
   
 call EPSSolve(eps, ierr)
+if (ierr .ne. 0) then
+    print *, "BŁĄD: EPSSolve nie powiodło się! Kod:", ierr
+    stop
+end if
 call EPSGetConverged(eps, nconv, ierr)
 print *, "Solver found ", nconv, " convergent eigenvalues."
 call MatCreateVecs(A, wektor_petsc, wektor_urojony_petsc, ierr)

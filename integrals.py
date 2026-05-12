@@ -1,39 +1,42 @@
-from pyscf import gto, scf, ao2mo
+from pyscf import gto, scf, ao2mo, x2c
 import numpy as np
-mol = gto.M(atom = 'O 0.000000 0.000000 0.000000',basis='sto-3g',spin=0,charge=0)
+mol = gto.M(atom = 'O 0.000000 0.000000 0.000000',basis='sto-3g',spin=2,charge=0,verbose=0)
 kin = mol.intor('int1e_kin')
 vnuc = mol.intor('int1e_nuc')
 overlap = mol.intor('int1e_ovlp')
 eri = mol.intor('int2e')
-relativistic = False
+relativistic = True
 mf = scf.RHF(mol)
 mf.kernel()
-
-c = 137.035999084
-soc_prefactor = 1.0 / (2.0 * c**2)
+print(mol.nelectron)
+print(mol.nao)
 
 C = mf.mo_coeff   
+n_mo=C.shape[1]
+h_ao = kin + vnuc + 0j
 
-h_ao = kin + vnuc
-
-h_mo = C.conj().T @ h_ao @ C + 0j
+h_mo = C.conj().T @ h_ao @ C 
 
 
 if relativistic:
-    soc_ao = mol.intor('int1e_pnucxp', comp=3)
-    soc_mo = np.einsum('pi,xpq,qj->xij',C.conj(),soc_ao,C)
-    #soc_ao[0] - > L_x
-    #soc_ao[1] - > L_y
-    #soc_ao[2] - > L_z
-    Lx = -1j * soc_mo[0]*soc_prefactor
-    Ly = -1j * soc_mo[1]*soc_prefactor
-    Lz = -1j * soc_mo[2]*soc_prefactor
+    mf_soc = scf.GHF(mol).x2c()
+    hcore_x2c = mf_soc.get_hcore()
+    n_ao = mol.nao_nr()
+    h_aa = hcore_x2c[:n_ao, :n_ao]
+    h_bb = hcore_x2c[n_ao:, n_ao:]
+    h_ab = hcore_x2c[:n_ao, n_ao:]
+    h_ba = hcore_x2c[n_ao:, :n_ao]
+    h_soc_mo_ab = C.T @ h_ab @ C
+    h_soc_mo_ba = C.T @ h_ba @ C
+    h_soc_mo_aa = C.T @ h_aa @ C
+    h_soc_mo_bb = C.T @ h_bb @ C
 
-    h_upup = h_mo + 0.5 * Lz
-    h_dndn = h_mo - 0.5 * Lz
 
-    h_updn = 0.5 * (Lx - 1j * Ly) + 0j
-    h_dnup = 0.5 * (Lx + 1j * Ly) + 0j
+    h_upup = h_soc_mo_aa
+    h_dndn = h_soc_mo_bb
+
+    h_updn = h_soc_mo_ab
+    h_dnup = h_soc_mo_ba
 else:
     h_upup = h_mo 
     h_dndn = h_mo

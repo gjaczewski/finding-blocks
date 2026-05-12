@@ -111,44 +111,60 @@ end subroutine check_orbital_space_declarations
 subroutine check_hamiltonian(relativistic,norb,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix,hso_ab,hso_ba)
 logical :: relativistic
 integer, intent(in) :: norb
-complex(8), intent(in) :: hopping_alpha(norb,norb),hopping_beta(norb,norb), interaction_alpha(norb,norb,norb,norb), interaction_beta(norb,norb,norb,norb),interaction_mix(norb,norb,norb,norb),hso_ab(norb,norb),hso_ba(norb,norb)
+complex(8), intent(inout) :: hopping_alpha(norb,norb),hopping_beta(norb,norb), interaction_alpha(norb,norb,norb,norb), interaction_beta(norb,norb,norb,norb),interaction_mix(norb,norb,norb,norb),hso_ab(norb,norb),hso_ba(norb,norb)
 integer :: i,j,k,l
 do i=1,norb
    do j=1,norb
       if (abs(hopping_alpha(i,j)-conjg(hopping_alpha(j,i))) .gt. 1E-10) then
-         write(*,*) i,j,hopping_alpha(i,j), conjg(hopping_alpha(j,i)),hopping_alpha(i,j)-conjg(hopping_alpha(j,i))
          write(*,*) "Hopping alpha is not hermitian"
          write(*,*) "QUITTING THE PROGRAM"
          STOP
+      else
+         hopping_alpha(i,j) = conjg(hopping_alpha(j,i))
       end if
       if (abs(hopping_beta(i,j)-conjg(hopping_beta(j,i))) .gt. 1E-10) then
          write(*,*) "Hopping beta is not hermitian"
          write(*,*) "QUITTING THE PROGRAM"
          STOP
+      else
+         hopping_beta(i,j) = conjg(hopping_beta(j,i))
       end if
       if (relativistic .eqv. .true.) then
          if (abs(hso_ab(i,j)-conjg(hso_ba(j,i))) .gt. 1E-10) then
             write(*,*) "Spin orbit hamiltonian is not hermitian"
             write(*,*) "QUITTING THE PROGRAM"
             STOP
+         else
+            hso_ab(i,j) = conjg(hso_ba(j,i))
          end if
       end if
       do k=1,norb
          do l=1,norb
             if ((abs(interaction_mix(i,j,k,l)-conjg(interaction_mix(k,l,i,j))) .gt. 1E-10 ) .or. (abs(interaction_mix(i,j,k,l)-interaction_mix(j,i,l,k)) .gt. 1E-10 )) then
+               write(*,*) i,j,k,l
+               write(*,*) abs(interaction_mix(i,j,k,l)-conjg(interaction_mix(k,l,i,j))), abs(interaction_mix(i,j,k,l)-interaction_mix(j,i,l,k)) 
                write(*,*) "Mixed interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
+            else
+               interaction_mix(i,j,k,l) = conjg(interaction_mix(k,l,i,j))
+               interaction_mix(i,j,k,l) = interaction_mix(j,i,l,k)
             end if
             if ((abs(interaction_alpha(i,j,k,l)-conjg(interaction_alpha(k,l,i,j))) .gt. 1E-10) .or. (abs(interaction_alpha(i,j,k,l)-interaction_alpha(j,i,l,k)) .gt. 1E-10)) then
                write(*,*) "Alpha interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
+            else
+               interaction_alpha(i,j,k,l) = conjg(interaction_alpha(k,l,i,j))
+               interaction_alpha(i,j,k,l) = interaction_alpha(j,i,l,k)
             end if
             if ((abs(interaction_beta(i,j,k,l)-conjg(interaction_beta(k,l,i,j))) .gt. 1E-10) .or. (abs(interaction_beta(i,j,k,l)-interaction_beta(j,i,l,k)) .gt. 1E-10)) then
                write(*,*) "Beta interaction is not hermitian or not symmetric"
                write(*,*) "QUITTING THE PROGRAM"
                STOP
+            else
+               interaction_beta(i,j,k,l) = conjg(interaction_beta(k,l,i,j))
+               interaction_beta(i,j,k,l) = interaction_beta(j,i,l,k)
             end if
          end do
       end do
@@ -797,6 +813,7 @@ integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_annihilation_cr
 complex(8), intent(in) :: hopping(norb,norb), interaction(norb,norb,norb,norb)
 complex(8), intent(out) :: spin_nr_hamiltonian(n_spin_strings,n_spin_strings)
 integer :: j,p,q,r,s, temp_state1,temp_state2,temp_sign1,temp_sign2
+spin_nr_hamiltonian(:,:) = 0
 if (n_spin .gt. 0) then
 do j=1,n_spin_strings
    do q=1,n_spin
@@ -833,6 +850,8 @@ complex(8), intent (inout) :: vector_new(n_strings_alpha*n_strings_beta),vector(
 complex(8) :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
 integer :: mu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
 new_table(:,:) = 0
+temp_table(:,:) = 0
+vector_new(:) = 0
 do i=1,n_strings_alpha
    mu = (i-1)*n_strings_beta+1
    do j=1,n_strings_beta
@@ -844,9 +863,19 @@ do i=1,n_strings_alpha
    do j=1,n_strings_beta
       do k=1,n_strings_alpha
          new_table(i,j) = new_table(i,j) + temp_table(k,j)*alpha_hamiltonian(i,k)
+         if (new_table(i,j) /= new_table(i,j)) then
+          print *, 'NaN pojawil sie dla', i,j,k 
+          stop
+         end if
       end do
       do l=1,n_strings_beta
          new_table(i,j) = new_table(i,j) + temp_table(i,l)*beta_hamiltonian(j,l)
+         if (new_table(i,j) /= new_table(i,j)) then
+          print *, 'NaN pojawil sie dla', i,j,k,l 
+          write(*,*) temp_table(i,l)
+          write(*,*) beta_hamiltonian(j,l)
+          stop
+         end if
       end do
       do p=1,n_alpha
          do r=1,norb
@@ -859,6 +888,10 @@ do i=1,n_strings_alpha
                      if (temp_state2 .ne. 0) then
                         temp_sign2 = temp_sign1*beta_annihilation_creation_matrix(s,strings_beta(j,q),j,2)
                         new_table(i,j) = new_table(i,j) + temp_sign2*temp_table(temp_state1,temp_state2)*interaction_mix(strings_alpha(i,p),strings_beta(j,q),r,s)
+                        if (new_table(i,j) /= new_table(i,j)) then
+                           print *, 'NaN pojawil sie dla', i,j,p,r,q,s
+                           stop
+                        end if
                      end if 
                   end do
                end do   
@@ -884,11 +917,34 @@ complex(8), intent (inout) :: vector_new(dane%n_strings_alpha*dane%n_strings_bet
 complex(8) ::  vector_new_1(dane%n_strings_alpha*dane%n_strings_beta),vector_new_2(dane%n_strings_alpha_p1*dane%n_strings_beta_m1),vector_new_3(dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
 complex(8) :: temp_table1(dane%n_strings_alpha,dane%n_strings_beta), new_table1(dane%n_strings_alpha,dane%n_strings_beta),temp_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1), new_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1),temp_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1), new_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1)
 integer :: i,j,k,l,p,q,mu, temp_state1, temp_state2, temp_sign1, temp_sign2
-
+temp_table1(:,:) = 0
+temp_table2(:,:) = 0
+temp_table3(:,:) = 0 
+vector_new(:) = 0
+vector_new_1(:) = 0
+vector_new_2(:) = 0
+vector_new_3(:) = 0
 call nr_matrix_vector_product(dane%alpha_hamiltonian,dane%str_a,dane%n_strings_alpha,dane%n_alpha,dane%beta_hamiltonian,dane%str_b,dane%n_strings_beta,dane%n_beta,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix,dane%beta_annihilation_creation_matrix,vector(dane%size_tot(1,1):dane%size_tot(1,2)),vector_new_1)
 call nr_matrix_vector_product(dane%alpha_hamiltonian_p1,dane%str_a_p1,dane%n_strings_alpha_p1,dane%n_alpha+1,dane%beta_hamiltonian_m1,dane%str_b_m1,dane%n_strings_beta_m1,dane%n_beta-1,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix_p1,dane%beta_annihilation_creation_matrix_m1,vector(dane%size_tot(2,1):dane%size_tot(1,2)+dane%size_tot(2,2)),vector_new_2)
 call nr_matrix_vector_product(dane%alpha_hamiltonian_m1,dane%str_a_m1,dane%n_strings_alpha_m1,dane%n_alpha-1,dane%beta_hamiltonian_p1,dane%str_b_p1,dane%n_strings_beta_p1,dane%n_beta+1,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix_m1,dane%beta_annihilation_creation_matrix_p1,vector(dane%size_tot(3,1):dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2)),vector_new_3)
-
+do i = 1, dane%n_strings_alpha*dane%n_strings_beta
+   if (vector_new_1(i) /= vector_new_1(i)) then
+      print *, "NaN pojawił się w pętli 1 dla i =", i
+      stop
+   end if
+end do
+do i = 1, dane%n_strings_alpha_p1*dane%n_strings_beta_m1
+   if (vector_new_2(i) /= vector_new_2(i)) then
+      print *, "NaN pojawił się w pętli 2 dla i =", i
+      stop
+   end if
+end do
+do i = 1, dane%n_strings_alpha_m1*dane%n_strings_beta_p1
+   if (vector_new_3(i) /= vector_new_3(i)) then
+      print *, "NaN pojawił się w pętli 3 dla i =", i
+      stop
+   end if
+end do
 new_table1(:,:) = 0
 new_table2(:,:) = 0
 new_table3(:,:) = 0
@@ -1029,9 +1085,8 @@ end subroutine rel_matrix_vector_product
     complex(8), intent(inout) :: vector_new(:)
     !integer, intent(in) :: n
     !n = dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2)
-
+    vector_new(:) = 0
     if (dane%relativistic) then
-
       call rel_matrix_vector_product(dane, vector, vector_new)
     else
 
@@ -1046,7 +1101,7 @@ subroutine generate_diagonal_elements(alpha_hamiltonian,strings_alpha,n_strings_
 integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
 integer, intent (in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
 complex(8), intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb)
-real(8), intent(out) :: diagonal(n_strings_alpha*n_strings_beta)
+complex(8), intent(out) :: diagonal(n_strings_alpha*n_strings_beta)
 integer :: mu,i,j,p,q
 complex(8) :: temp_diagonal(n_strings_alpha*n_strings_beta)
 do mu=1,n_strings_alpha*n_strings_beta
