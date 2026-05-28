@@ -22,7 +22,7 @@ real, allocatable :: orbital_energies(:)
 complex(8), allocatable, target, save :: diagonal(:)
 integer :: N
 integer              :: nconv
-integer :: liczba_wartosci = 1
+integer :: liczba_wartosci = 10
 PetscScalar          :: wartosc_rzeczywista, wartosc_urojona
 Vec                  :: wektor_petsc, wektor_urojony_petsc
 PetscScalar, pointer :: tablica_wynikowa(:)
@@ -36,10 +36,10 @@ call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
   !********* INPUT **********
 relativistic=.true.
   
-norb=5
+norb=6
 
-n_alpha=5
-n_beta=3
+n_alpha=1
+n_beta=1
   
 n_RAS_spaces_occ=0
 n_RAS_spaces_virt=0
@@ -64,12 +64,12 @@ allocate(interaction_alpha(norb,norb,norb,norb))
 allocate(interaction_beta(norb,norb,norb,norb))
 allocate(dane%hso_ab(norb,norb))
 allocate(dane%hso_ba(norb,norb))
-open(unit = 1, file = "mo_energies.txt")
-open(unit = 2, file = "h_upup.txt")
-open(unit = 4, file = "h_dndn.txt")
-open(unit = 3, file = "eri_mo.txt")
-open(unit = 5, file = "h_updn.txt")
-open(unit = 7, file = "h_dnup.txt")
+open(unit = 1, file = "integrals/mo_energies.txt")
+open(unit = 2, file = "integrals/h_upup.txt")
+open(unit = 4, file = "integrals/h_dndn.txt")
+open(unit = 3, file = "integrals/eri_mo.txt")
+open(unit = 5, file = "integrals/h_updn.txt")
+open(unit = 7, file = "integrals/h_dnup.txt")
 do i=1,norb 
     read(1,*) orbital_energies(i)
     read(2,*) hopping_alpha(i,:)
@@ -345,7 +345,7 @@ call EPSSetProblemType(eps, EPS_HEP, ierr)
 call EPSSetType(eps,EPSJD, ierr)
   
   
-call EPSSetWhichEigenpairs(eps, EPS_LARGEST_MAGNITUDE, ierr)
+call EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL, ierr)
 call EPSSetDimensions(eps, liczba_wartosci, PETSC_DECIDE, PETSC_DECIDE, ierr)
 call EPSSetFromOptions(eps, ierr)
   
@@ -364,7 +364,7 @@ do i = 0, nconv - 1
     call EPSGetEigenpair(eps, i, wartosc_rzeczywista, wartosc_urojona, &
                          wektor_petsc, wektor_urojony_petsc, ierr)
 
-    print *, "Eigenvalue no.", i + 1, "=", real(wartosc_rzeczywista)
+    print *, "Eigenvalue no.", i + 1, "=", real(wartosc_rzeczywista)+0.7151043390810812
 
 
     call VecGetArrayRead(wektor_petsc, tablica_wynikowa, ierr)
