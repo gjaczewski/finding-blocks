@@ -1338,18 +1338,140 @@ dane%n_strings_alpha_m1 = sizea(3,2)
 dane%n_strings_beta_m1 = sizeb(3,2)
 end subroutine generate_dane
 
-subroutine create_electron(orbital,spin,state,new_state,dane,new_dane)
+subroutine create_electron(orbital,state,new_state,dane,new_dane)
 type(t_params), intent(in) :: dane, new_dane
 integer, intent(in) :: orbital
-integer, intent(in) :: spin
+integer :: spin
 complex(8), intent(in) :: state(dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2))
 complex(8), intent(out) :: new_state(new_dane%size_tot(1,2) + new_dane%size_tot(2,2) + new_dane%size_tot(3,2))
-   if (abs(spin) .ne. 1) then
-      write(*,*) "Improper value of spin:"
-      write(*,*) spin
-      write(*,*) "Allowed values are -1 or +1"
+complex(8) :: temp_table1(dane%n_strings_alpha,dane%n_strings_beta), temp_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1), temp_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1)
+complex(8) :: new_temp_table1(new_dane%n_strings_alpha,new_dane%n_strings_beta), new_temp_table2(new_dane%n_strings_alpha_p1,new_dane%n_strings_beta_m1), new_temp_table3(new_dane%n_strings_alpha_m1,new_dane%n_strings_beta_p1)
+integer :: i,j,mu
+   new_state(:) = 0
+   new_temp_table1(:,:)=0
+   new_temp_table2(:,:)=0
+   new_temp_table3(:,:)=0
+   if ((dane%n_alpha-new_dane%n_alpha .eq. -1) .and. (dane%n_beta .eq. new_dane%n_beta)) then
+      spin = 1
+   else if ((dane%n_beta-new_dane%n_beta .eq. -1) .and. (dane%n_alpha .eq. new_dane%n_alpha)) then
+      spin = -1
+   else
+      write(*,*) "WRONG NUMBER OF ELECTRONS"
       stop
    end if
+! TBD: ZABEZPIECZENIA JESLI JAKIES BLOKI PUSTE
+   do i=1,dane%n_strings_alpha
+      mu = (i-1)*dane%n_strings_beta+1
+      do j=1,dane%n_strings_beta
+         temp_table1(i,j) = state(mu)
+         mu = mu + 1
+      end do
+   end do
+
+   do i=1,dane%n_strings_alpha_p1
+      mu = (i-1)*dane%n_strings_beta_m1+1
+      do j=1,dane%n_strings_beta_m1
+         temp_table2(i,j) = state(mu+dane%size_tot(1,2))
+         mu = mu + 1
+      end do
+   end do
+   
+   do i=1,dane%n_strings_alpha_m1
+      mu = (i-1)*dane%n_strings_beta_p1+1
+      do j=1,dane%n_strings_beta_p1
+         temp_table3(i,j) = state(mu+dane%size_tot(1,2)+dane%size_tot(2,2))
+         mu = mu + 1
+      end do
+   end do
+
+   if (spin .eq. 1) then
+      do i=1,new_dane%n_strings_alpha
+         mu = (i-1)*new_dane%n_strings_beta+1
+         do j=1,new_dane%n_strings_beta
+          if (new_dane%alpha_annihilation_matrix(orbital,i,1) .ne. 0) then
+            new_temp_table1(i,j) = new_dane%alpha_annihilation_matrix(orbital,i,2)*temp_table1(new_dane%alpha_annihilation_matrix(orbital,i,1),j)
+          end if
+            mu = mu + 1
+         end do
+      end do
+      
+      
+      do i=1,new_dane%n_strings_alpha_p1
+         mu = (i-1)*new_dane%n_strings_beta_m1+1
+         do j=1,new_dane%n_strings_beta_m1
+           if (new_dane%alpha_annihilation_matrix_p1(orbital,i,1) .ne. 0) then
+            new_temp_table2(i,j) = new_dane%alpha_annihilation_matrix_p1(orbital,i,2)*temp_table2(new_dane%alpha_annihilation_matrix_p1(orbital,i,1),j)
+           end if
+            mu = mu + 1
+         end do
+      end do  
+
+      do i=1,new_dane%n_strings_alpha_m1
+         mu = (i-1)*new_dane%n_strings_beta_p1+1
+         do j=1,new_dane%n_strings_beta_p1
+           if (dane%alpha_annihilation_matrix(orbital,i,1) .ne. 0) then
+            new_temp_table3(i,j) = dane%alpha_annihilation_matrix(orbital,i,2)*temp_table3(dane%alpha_annihilation_matrix(orbital,i,1),j)
+           end if
+            mu = mu + 1
+         end do
+      end do 
+   else
+      do i=1,new_dane%n_strings_alpha
+         mu = (i-1)*new_dane%n_strings_beta+1
+         do j=1,new_dane%n_strings_beta
+           if (new_dane%beta_annihilation_matrix(orbital,j,1) .ne. 0) then
+            new_temp_table1(i,j) = new_dane%beta_annihilation_matrix(orbital,j,2)*temp_table1(i,new_dane%beta_annihilation_matrix(orbital,j,1))*(-1)**new_dane%n_alpha
+           end if
+            mu = mu + 1
+         end do
+      end do
+      
+      
+      do i=1,new_dane%n_strings_alpha_p1
+         mu = (i-1)*new_dane%n_strings_beta_m1+1
+         do j=1,new_dane%n_strings_beta_m1
+           if (dane%beta_annihilation_matrix(orbital,j,1) .ne. 0) then
+            new_temp_table2(i,j) = dane%beta_annihilation_matrix(orbital,j,2)*temp_table2(i,dane%beta_annihilation_matrix(orbital,j,1))*(-1)**(new_dane%n_alpha+1)
+           end if
+            mu = mu + 1
+         end do
+      end do  
+
+      do i=1,new_dane%n_strings_alpha_m1
+         mu = (i-1)*new_dane%n_strings_beta_p1+1
+         do j=1,new_dane%n_strings_beta_p1
+           if (new_dane%beta_annihilation_matrix_p1(orbital,j,1) .ne. 0) then
+            new_temp_table3(i,j) = new_dane%beta_annihilation_matrix_p1(orbital,j,2)*temp_table3(i,new_dane%beta_annihilation_matrix_p1(orbital,j,1))*(-1)**(new_dane%n_alpha-1)
+           end if
+            mu = mu + 1
+         end do
+      end do 
+
+   end if
+do i=1,new_dane%n_strings_alpha
+   mu = (i-1)*new_dane%n_strings_beta+1
+   do j=1,new_dane%n_strings_beta
+      new_state(mu) =  new_temp_table1(i,j)
+      mu = mu + 1
+   end do
+end do
+
+do i=1,new_dane%n_strings_alpha_p1
+   mu = (i-1)*new_dane%n_strings_beta_m1+1
+   do j=1,new_dane%n_strings_beta_m1
+      new_state(mu+new_dane%size_tot(1,2)) =  new_temp_table2(i,j)
+      mu = mu + 1
+   end do
+end do
+
+do i=1,new_dane%n_strings_alpha_m1
+   mu = (i-1)*new_dane%n_strings_beta_p1+1
+   do j=1,new_dane%n_strings_beta_p1
+      new_state(mu+new_dane%size_tot(1,2)+new_dane%size_tot(2,2)) =  new_temp_table3(i,j)
+      mu = mu + 1
+   end do
+end do
+
 end subroutine create_electron
 end module library_rel_ed
 

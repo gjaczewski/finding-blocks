@@ -10,10 +10,12 @@ integer:: n_RAS_spaces_occ,n_RAS_spaces_virt,active_space
 integer, dimension(:), allocatable:: RAS_space_occ,RAS_space_virt,excit_array
 logical:: relativistic
 integer :: i, j,k,l,p,q 
+real(8) :: r
 complex(8), allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alpha(:,:,:,:),interaction_beta(:,:,:,:)
 complex(8), allocatable :: interaction_temp(:,:)
 real, allocatable :: orbital_energies(:)
 complex(8), allocatable, target, save :: diagonal(:)
+complex(8), allocatable :: ground_state(:),new_state(:)
 integer :: N
 integer              :: nconv
 integer :: liczba_wartosci = 1
@@ -104,10 +106,10 @@ call generate_dane(dane,norb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,R
 diagonal = dane%diag
 
 N = dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2)
-
+allocate(ground_state(N))
 ptr_dane => dane
 ptr_przekatna => diagonal
-n_rozmiar = N
+
 
 call MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, &
                       N, N, PETSC_NULL_INTEGER, A, ierr)
@@ -145,13 +147,18 @@ do i = 0,nconv - 1
     print *, "Eigenvalue no.", i + 1, "=", real(wartosc_rzeczywista)+0.7151043390810812
 
 
-    call VecGetArrayRead(wektor_petsc, tablica_wynikowa, ierr)
-
-
-    call VecRestoreArrayRead(wektor_petsc, tablica_wynikowa, ierr)
 
   end do
+    
+call EPSGetEigenpair(eps, 0, wartosc_rzeczywista, wartosc_urojona, &
+                         wektor_petsc, wektor_urojony_petsc, ierr)
 
+
+
+
+call VecGetArrayRead(wektor_petsc, tablica_wynikowa, ierr)
+ground_state = tablica_wynikowa
+call VecRestoreArrayRead(wektor_petsc, tablica_wynikowa, ierr)
 
 call VecDestroy(wektor_petsc, ierr)
 call VecDestroy(wektor_urojony_petsc, ierr)
@@ -165,16 +172,34 @@ call SlepcFinalize(ierr)
 
 nullify(ptr_dane)
 nullify(ptr_przekatna)
-
+r=0
+do i=1,N 
+write(*,*)i, ground_state(i)
+r=r+abs(ground_state(i))**2
+end do
+write(*,*) r
 
 !HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
 !BLOCK n_alpha+1
+dane_el_gf_a%relativistic = relativistic
+dane_el_gf_a%interaction_mix = interaction_alpha
 call check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha+1,n_beta)
 call generate_dane(dane_el_gf_a,norb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta)
+allocate(new_state(dane_el_gf_a%size_tot(1,2)+dane_el_gf_a%size_tot(2,2)+dane_el_gf_a%size_tot(3,2)))
+call create_electron(1,ground_state,new_state,dane,dane_el_gf_a)
 
-
-
-
+r=0
+j=0
+do i=1,dane_el_gf_a%size_tot(1,2)+dane_el_gf_a%size_tot(2,2)+dane_el_gf_a%size_tot(3,2) 
+write(*,*)i, new_state(i)
+r=r+abs(new_state(i))**2
+if (new_state(i) .eq. 0) then
+ j=j+1
+end if
+end do
+write(*,*) r
+write(*,*) "Liczba zerowych elementow:", j
+write(*,*) "Oczekiwana liczba czastek na orbitalu:", 1-r  
 
 
 
