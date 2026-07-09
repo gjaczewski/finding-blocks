@@ -1338,10 +1338,10 @@ dane%n_strings_alpha_m1 = sizea(3,2)
 dane%n_strings_beta_m1 = sizeb(3,2)
 end subroutine generate_dane
 
-subroutine create_electron(orbital,state,new_state,dane,new_dane)
+subroutine create_electron(orbital,state,new_state,dane,new_dane,spin)
 type(t_params), intent(in) :: dane, new_dane
 integer, intent(in) :: orbital
-integer :: spin
+integer,intent(in) :: spin
 complex(8), intent(in) :: state(dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2))
 complex(8), intent(out) :: new_state(new_dane%size_tot(1,2) + new_dane%size_tot(2,2) + new_dane%size_tot(3,2))
 complex(8) :: temp_table1(dane%n_strings_alpha,dane%n_strings_beta), temp_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1), temp_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1)
@@ -1351,9 +1351,9 @@ integer :: i,j,mu
    new_temp_table1(:,:)=0
    new_temp_table2(:,:)=0
    new_temp_table3(:,:)=0
-   if ((dane%n_alpha-new_dane%n_alpha .eq. -1) .and. (dane%n_beta .eq. new_dane%n_beta)) then
+   if (((dane%n_alpha-new_dane%n_alpha .eq. -1) .and. ((dane%n_beta .eq. new_dane%n_beta) .and. (spin .eq. 1)))) then
       spin = 1
-   else if ((dane%n_beta-new_dane%n_beta .eq. -1) .and. (dane%n_alpha .eq. new_dane%n_alpha)) then
+   else if (((dane%n_beta-new_dane%n_beta .eq. -1) .and. ((dane%n_alpha .eq. new_dane%n_alpha) .and. (spin .eq. -1)))) then
       spin = -1
    else
       write(*,*) "WRONG NUMBER OF ELECTRONS"
@@ -1466,10 +1466,10 @@ end do
 end if
 end subroutine create_electron
 
-subroutine create_hole(orbital,state,new_state,dane,new_dane)
+subroutine create_hole(orbital,state,new_state,dane,new_dane,spin)
 type(t_params), intent(in) :: dane, new_dane
 integer, intent(in) :: orbital
-integer :: spin
+integer, intent(in) :: spin
 complex(8), intent(in) :: state(dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2))
 complex(8), intent(out) :: new_state(new_dane%size_tot(1,2) + new_dane%size_tot(2,2) + new_dane%size_tot(3,2))
 complex(8) :: temp_table1(dane%n_strings_alpha,dane%n_strings_beta), temp_table2(dane%n_strings_alpha_p1,dane%n_strings_beta_m1), temp_table3(dane%n_strings_alpha_m1,dane%n_strings_beta_p1)
@@ -1479,9 +1479,9 @@ integer :: i,j,mu
    new_temp_table1(:,:)=0
    new_temp_table2(:,:)=0
    new_temp_table3(:,:)=0
-   if ((dane%n_alpha-new_dane%n_alpha .eq. 1) .and. (dane%n_beta .eq. new_dane%n_beta)) then
+   if (((dane%n_alpha-new_dane%n_alpha .eq. 1) .and. ((dane%n_beta .eq. new_dane%n_beta) .and. (spin .eq. 1)))) then
       spin = 1
-   else if ((dane%n_beta-new_dane%n_beta .eq. 1) .and. (dane%n_alpha .eq. new_dane%n_alpha)) then
+   else if (((dane%n_beta-new_dane%n_beta .eq. 1) .and. ((dane%n_alpha .eq. new_dane%n_alpha) .and. (spin .eq. -1)))) then
       spin = -1
    else
       write(*,*) "WRONG NUMBER OF ELECTRONS"
@@ -1612,5 +1612,22 @@ do i=1,new_dane_alpha%size_tot(3,2)
    scalar_product = scalar_product + 2*real(new_state_alpha(i+new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2))*new_state_beta(i))
 end do
 end subroutine diff_spin_product
+
+subroutine calc_fraction_diag(ground_state,dane,new_dane,z,orbital,spin,e_or_h,krylov_size,fraction)
+type(t_params), intent(in) :: dane, new_dane
+complex(8), intent(in) :: ground_state(dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2))
+complex(8), intent(in) :: z
+integer, intent(in) :: orbital, krylov_size
+integer, intent(in) :: spin, e_or_h
+complex(8), intent(out) :: fraction
+complex(8) :: new_state(new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)), a(krylov_size), b(krylov_size)
+if (e_or_h .eq. 1) then
+ call create_electron(orbital,ground_state,new_state,dane,new_dane,spin)
+else if (e_or_h .eq. -1) then
+ call create_hole(orbital,ground_state,new_state,dane,new_dane,spin)
+else
+write(*,*) "ERROR: e_or_h must be equal 1 (creation) or -1 (annihilation)"
+stop
+end if
 end module library_rel_ed
 
