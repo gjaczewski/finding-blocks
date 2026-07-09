@@ -16,6 +16,7 @@ complex(8), allocatable :: interaction_temp(:,:)
 real, allocatable :: orbital_energies(:)
 complex(8), allocatable, target, save :: diagonal(:)
 complex(8), allocatable :: ground_state(:),new_state(:)
+integer :: krylov_size
 integer :: N
 integer              :: nconv
 integer :: liczba_wartosci = 1
@@ -181,6 +182,7 @@ write(*,*) r
 
 !HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
 !BLOCK n_alpha+1
+krylov_size = 4
 dane_el_gf_a%relativistic = relativistic
 dane_el_gf_a%interaction_mix = interaction_alpha
 call check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha+1,n_beta)
@@ -188,18 +190,7 @@ call generate_dane(dane_el_gf_a,norb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spa
 allocate(new_state(dane_el_gf_a%size_tot(1,2)+dane_el_gf_a%size_tot(2,2)+dane_el_gf_a%size_tot(3,2)))
 call create_electron(1,ground_state,new_state,dane,dane_el_gf_a)
 
-r=0
-j=0
-do i=1,dane_el_gf_a%size_tot(1,2)+dane_el_gf_a%size_tot(2,2)+dane_el_gf_a%size_tot(3,2) 
-write(*,*)i, new_state(i)
-r=r+abs(new_state(i))**2
-if (new_state(i) .eq. 0) then
- j=j+1
-end if
-end do
-write(*,*) r
-write(*,*) "Liczba zerowych elementow:", j
-write(*,*) "Oczekiwana liczba czastek na orbitalu:", 1-r  
+
 
 
 
