@@ -31,7 +31,7 @@ EPS            :: eps
 call cpu_time(start_time)
 call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
   !********* INPUT **********
-relativistic=.true.
+relativistic=.false.
 dane%relativistic = relativistic
 
 

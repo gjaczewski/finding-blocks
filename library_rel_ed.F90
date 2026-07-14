@@ -1702,7 +1702,7 @@ complex(8) :: fraction_plus, fraction1, fraction2
 complex(8) :: new_state1_1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_1(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
 complex(8) :: new_state1_2(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
 complex(8) :: new_state1_3(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_3(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
-complex(8) :: temp_state1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)),temp_state2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2)), a(krylov_size), b(krylov_size), c(2)
+complex(8) :: temp_state1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)),temp_state2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2)), a(krylov_size), b(krylov_size)
 
 integer :: i,j
 if (e_or_h .eq. 1) then
@@ -1724,7 +1724,7 @@ else
    call diff_spin_product(new_state1_1,new_dane1,new_state2_1,new_dane2,b(1))
    b(1) = sqrt(b(1))
    new_state1_1 = new_state1_1/b(1)
-   new_state2_1 = new_dane2_1/b(1)
+   new_state2_1 = new_state2_1/b(1)
 
    call matrix_vector_product(new_dane1, new_state1_1, temp_state1)
    call matrix_vector_product(new_dane2, new_state2_1, temp_state2)
@@ -1745,7 +1745,7 @@ else
    call diff_spin_product(new_state1_2,new_dane1,new_state2_2,new_dane2,b(2))
    b(2) = sqrt(b(2))
    new_state1_2 = new_state1_2/b(2)
-   new_state2_2 = new_dane2_2/b(2)
+   new_state2_2 = new_state2_2/b(2)
 
    call matrix_vector_product(new_dane1, new_state1_2, temp_state1)
    call matrix_vector_product(new_dane2, new_state2_2, temp_state2)
@@ -1767,7 +1767,7 @@ else
       call diff_spin_product(new_state1_3,new_dane1,new_state2_3,new_dane2,b(i))
       b(i) = sqrt(b(i))
       new_state1_3 = new_state1_3/b(i)
-      new_state2_3 = new_dane2_3/b(i)
+      new_state2_3 = new_state2_3/b(i)
       call matrix_vector_product(new_dane1, new_state1_3, temp_state1)
       call matrix_vector_product(new_dane2, new_state2_3, temp_state2)
       call diff_spin_product(new_state1_3,new_dane1,temp_state2,new_dane2,a(i))
