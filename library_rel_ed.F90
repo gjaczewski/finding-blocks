@@ -1603,14 +1603,15 @@ end do
 do i=1,new_dane_beta%size_tot(1,2)+new_dane_beta%size_tot(2,2)+new_dane_beta%size_tot(3,2)
    scalar_product = scalar_product + abs(new_state_beta(i))**2
 end do
-
+if ((new_dane_alpha%relativistic .eqv. .true.) .and. (new_dane_beta%relativistic .eqv. .true.)) then
 do i=1,new_dane_alpha%size_tot(1,2)
-   scalar_product = scalar_product + 2*real(new_state_alpha(i)*new_state_beta(i+new_dane_beta%size_tot(1,2)))
+   scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i))*new_state_beta(i+new_dane_beta%size_tot(1,2)))
 end do
 
 do i=1,new_dane_alpha%size_tot(3,2)
-   scalar_product = scalar_product + 2*real(new_state_alpha(i+new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2))*new_state_beta(i))
+   scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2)))*new_state_beta(i))
 end do
+end if
 end subroutine diff_spin_product
 
 subroutine calc_fraction_diag(ground_state,dane,new_dane,z,orbital,spin,e_or_h,krylov_size,fraction)
@@ -1701,7 +1702,7 @@ complex(8) :: fraction_plus, fraction1, fraction2
 complex(8) :: new_state1_1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_1(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
 complex(8) :: new_state1_2(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
 complex(8) :: new_state1_3(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_3(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
-complex(8) :: temp_state1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)),temp_state2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2)), a(krylov_size), b(krylov_size)
+complex(8) :: temp_state1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)),temp_state2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2)), a(krylov_size), b(krylov_size), c(2)
 
 integer :: i,j
 if (e_or_h .eq. 1) then

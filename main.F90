@@ -188,7 +188,7 @@ dane_el_gf_a%interaction_mix = interaction_alpha
 call check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha+1,n_beta)
 call generate_dane(dane_el_gf_a,norb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta)
 allocate(new_state(dane_el_gf_a%size_tot(1,2)+dane_el_gf_a%size_tot(2,2)+dane_el_gf_a%size_tot(3,2)))
-call create_electron(1,ground_state,new_state,dane,dane_el_gf_a)
+call create_electron(1,ground_state,new_state,dane,dane_el_gf_a,1)
 
 
 
