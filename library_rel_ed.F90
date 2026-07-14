@@ -1,7 +1,7 @@
 module library_rel_ed
-type :: t_params
+type :: parameters
     sequence
-    integer :: n_strings_alpha, n_strings_beta, norb
+    integer :: n_strings_alpha, n_strings_beta, n_orb
     integer :: n_alpha, n_beta
     integer :: n_strings_alpha_p1, n_strings_beta_p1
     integer :: n_strings_alpha_m1, n_strings_beta_m1
@@ -25,26 +25,26 @@ type :: t_params
     complex(8), allocatable :: alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
     complex(8), allocatable :: diag(:)
     logical :: relativistic
-end type t_params
+end type parameters
 
 contains
 
-subroutine check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
+subroutine check_orbital_space_declarations(n_orb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
 
   implicit none
   integer, intent(in) :: n_alpha, n_beta
-  integer, intent(in) :: norb,n_RAS_spaces_occ,n_RAS_spaces_virt,active_space
+  integer, intent(in) :: n_orb,n_RAS_spaces_occ,n_RAS_spaces_virt,active_space
   integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt)
   integer:: orb,i
 
 
-  !norb - total number of orbitals
+  !n_orb - total number of orbitals
   ! the principles for the occupied and virtual RAS spaces are the same
   !number_RAS_spaces_occ - the number of RAS spaces which are present for occupied orbitals (eg. 3 spaces with core, singly, and doubly occupied orbitals out of total number of occupied orbitals)
   !dimension_RAS_space_occ(number_RAS_spaces_occ) - dimension/number of orbitals in each of the occupied RAS space (eg. dimension_RAS_space_occ(1)=number of orbitals in the first RAS space
   !dimension_active_space - number of orbitals in the active space 
   
-  !check if number of all the orbitals is equal to norb
+  !check if number of all the orbitals is equal to n_orb
 
   orb=0
   do i=1, n_RAS_spaces_occ
@@ -63,8 +63,8 @@ subroutine check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,
      STOP
   end if
 
-  if (orb .ne. norb) then
-     write(*,*)"SOMETHING WENT WRONG,number of orbitals declared in RAS spaces or active space is wrong (number of orbitals, number or orbitals in RAS+ACTIVE)", norb, orb
+  if (orb .ne. n_orb) then
+     write(*,*)"SOMETHING WENT WRONG,number of orbitals declared in RAS spaces or active space is wrong (number of orbitals, number or orbitals in RAS+ACTIVE)", n_orb, orb
      call flush(6)
      do i=1, n_RAS_spaces_occ
         write(*,*)"RAS SPACE OCC",i,"number of orbitals", RAS_space_occ(i)
@@ -109,13 +109,13 @@ subroutine check_orbital_space_declarations(norb,n_RAS_spaces_occ,RAS_space_occ,
   end if
 end subroutine check_orbital_space_declarations
 
-subroutine check_hamiltonian(relativistic,norb,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix,hso_ab,hso_ba)
+subroutine check_hamiltonian(relativistic,n_orb,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix,hso_ab,hso_ba)
 logical :: relativistic
-integer, intent(in) :: norb
-complex(8), intent(inout) :: hopping_alpha(norb,norb),hopping_beta(norb,norb), interaction_alpha(norb,norb,norb,norb), interaction_beta(norb,norb,norb,norb),interaction_mix(norb,norb,norb,norb),hso_ab(norb,norb),hso_ba(norb,norb)
+integer, intent(in) :: n_orb
+complex(8), intent(inout) :: hopping_alpha(n_orb,n_orb),hopping_beta(n_orb,n_orb), interaction_alpha(n_orb,n_orb,n_orb,n_orb), interaction_beta(n_orb,n_orb,n_orb,n_orb),interaction_mix(n_orb,n_orb,n_orb,n_orb),hso_ab(n_orb,n_orb),hso_ba(n_orb,n_orb)
 integer :: i,j,k,l
-do i=1,norb
-   do j=1,norb
+do i=1,n_orb
+   do j=1,n_orb
       if (abs(hopping_alpha(i,j)-conjg(hopping_alpha(j,i))) .gt. 1E-10) then
          write(*,*) "Hopping alpha is not hermitian"
          write(*,*) "QUITTING THE PROGRAM"
@@ -139,8 +139,8 @@ do i=1,norb
             hso_ab(i,j) = conjg(hso_ba(j,i))
          end if
       end if
-      do k=1,norb
-         do l=1,norb
+      do k=1,n_orb
+         do l=1,n_orb
             if ((abs(interaction_mix(i,j,k,l)-conjg(interaction_mix(k,l,i,j))) .gt. 1E-10 ) .or. (abs(interaction_mix(i,j,k,l)-interaction_mix(j,i,l,k)) .gt. 1E-10 )) then
                write(*,*) i,j,k,l
                write(*,*) abs(interaction_mix(i,j,k,l)-conjg(interaction_mix(k,l,i,j))), abs(interaction_mix(i,j,k,l)-interaction_mix(j,i,l,k)) 
@@ -448,10 +448,10 @@ integer :: i,k
 end subroutine bin_coeff
 
 
-  subroutine fill_spin_strings(orbital_energies,norb,n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s)
+  subroutine fill_spin_strings(orbital_energies,n_orb,n_s,NRD_spin,RAS_el_array_spin,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,range1,range2,sizes,str_s)
   
   implicit none
-  integer, intent(in):: n_s, norb
+  integer, intent(in):: n_s, n_orb
   integer, intent(in):: n_RAS_spaces_occ,n_RAS_spaces_virt,active_space
   integer, intent(in):: RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt)
   integer, intent(in):: range1,range2
@@ -459,7 +459,7 @@ end subroutine bin_coeff
   integer, intent(in):: RAS_el_array_spin(NRD_spin,n_RAS_spaces_occ+n_RAS_spaces_virt+1)
   integer, intent(in)::sizes
   integer, intent(inout)::str_s(sizes,n_s)
-  real, intent(in) :: orbital_energies(norb)
+  real(8), intent(in) :: orbital_energies(n_orb)
   integer :: space_sizes(n_RAS_spaces_occ+1+n_RAS_spaces_virt)
   integer, allocatable :: str_temp(:,:)
   integer, allocatable :: another_str_temp(:,:)
@@ -561,7 +561,7 @@ end subroutine bin_coeff
    deallocate(another_str_temp)
 
    end do
-   call sort_states(orbital_energies,norb,str_s,sizes,n_s)
+   call sort_states(orbital_energies,n_orb,str_s,sizes,n_s)
 end subroutine fill_spin_strings
 
 
@@ -642,12 +642,12 @@ subroutine string_direct_product(string_array1,nstr_1,n_el_1,string_array2,nstr_
 end subroutine string_direct_product
 
 
-subroutine sort_states(orbital_energies,norb,spin_strings,n_spin_strings,n_spin)
+subroutine sort_states(orbital_energies,n_orb,spin_strings,n_spin_strings,n_spin)
 implicit none
-integer, intent(in) :: n_spin_strings,n_spin,norb
+integer, intent(in) :: n_spin_strings,n_spin,n_orb
 integer, intent(inout) :: spin_strings(n_spin_strings,n_spin)
-real, intent(in) :: orbital_energies(norb)
-real :: temp_array(n_spin_strings), temp_energy
+real(8), intent(in) :: orbital_energies(n_orb)
+real(8) :: temp_array(n_spin_strings), temp_energy
 integer :: i,j
 integer :: temp_state(n_spin)
 if (n_spin_strings .ge. 2) then
@@ -732,11 +732,11 @@ end if
 end subroutine annihilation
 
 
-subroutine fill_annihilation_results(n_spin_strings_m1,n_spin_strings,n_spin,spin_strings_m1,spin_strings,norb,spin_annihilation_matrix)
+subroutine fill_annihilation_results(n_spin_strings_m1,n_spin_strings,n_spin,spin_strings_m1,spin_strings,n_orb,spin_annihilation_matrix)
 implicit none
-integer, intent(in) :: n_spin_strings_m1,n_spin_strings,n_spin,norb
+integer, intent(in) :: n_spin_strings_m1,n_spin_strings,n_spin,n_orb
 integer, intent(in) :: spin_strings_m1(n_spin_strings_m1,n_spin-1), spin_strings(n_spin_strings,n_spin)
-integer, intent(inout) :: spin_annihilation_matrix(norb,n_spin_strings,2)
+integer, intent(inout) :: spin_annihilation_matrix(n_orb,n_spin_strings,2)
 integer :: temp_string(n_spin-1)
 integer :: sign, i, j, k
 logical :: indicator
@@ -770,11 +770,11 @@ end subroutine fill_annihilation_results
 !***********************THIS WHOLE PART MIGHT BE OPTIMISED USING SMALL MATRICES**********************
 
 
-subroutine fill_annihilation_creation_matrix(n_spin,n_spin_strings,spin_strings,norb,annihilation_creation_matrix)
+subroutine fill_annihilation_creation_matrix(n_spin,n_spin_strings,spin_strings,n_orb,annihilation_creation_matrix)
 implicit none
-integer, intent(in) ::  n_spin, n_spin_strings, norb
+integer, intent(in) ::  n_spin, n_spin_strings, n_orb
 integer, intent(in) :: spin_strings(n_spin_strings,n_spin)
-integer, intent(inout) :: annihilation_creation_matrix(norb,norb,n_spin_strings,2)
+integer, intent(inout) :: annihilation_creation_matrix(n_orb,n_orb,n_spin_strings,2)
 integer :: i,j,k,l
 integer :: temp_string1(n_spin-1), temp_string2(n_spin-1)
 integer :: sign1,sign2
@@ -808,22 +808,22 @@ end if
 end subroutine fill_annihilation_creation_matrix
 
 
-subroutine fill_nr_single_spin_hamiltonian(spin_strings,n_spin_strings,n_spin,norb,hopping,interaction,spin_annihilation_creation_matrix,spin_nr_hamiltonian)
-integer, intent(in) :: n_spin_strings,n_spin,norb
-integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_annihilation_creation_matrix(norb,norb,n_spin_strings,2)
-complex(8), intent(in) :: hopping(norb,norb), interaction(norb,norb,norb,norb)
+subroutine fill_nr_single_spin_hamiltonian(spin_strings,n_spin_strings,n_spin,n_orb,hopping,interaction,spin_annihilation_creation_matrix,spin_nr_hamiltonian)
+integer, intent(in) :: n_spin_strings,n_spin,n_orb
+integer, intent(in) :: spin_strings(n_spin_strings,n_spin), spin_annihilation_creation_matrix(n_orb,n_orb,n_spin_strings,2)
+complex(8), intent(in) :: hopping(n_orb,n_orb), interaction(n_orb,n_orb,n_orb,n_orb)
 complex(8), intent(out) :: spin_nr_hamiltonian(n_spin_strings,n_spin_strings)
 integer :: j,p,q,r,s, temp_state1,temp_state2,temp_sign1,temp_sign2
 spin_nr_hamiltonian(:,:) = 0
 if (n_spin .gt. 0) then
 do j=1,n_spin_strings
    do q=1,n_spin
-      do p=1,norb
+      do p=1,n_orb
          temp_state1 = spin_annihilation_creation_matrix(p,spin_strings(j,q),j,1)
          temp_sign1 = spin_annihilation_creation_matrix(p,spin_strings(j,q),j,2)
          if (temp_state1 .ne. 0) then
             spin_nr_hamiltonian(temp_state1,j) = spin_nr_hamiltonian(temp_state1,j) + temp_sign1*hopping(p,spin_strings(j,q))
-            do r=1,norb
+            do r=1,n_orb
                spin_nr_hamiltonian(temp_state1,j) = spin_nr_hamiltonian(temp_state1,j) + 0.5*temp_sign1*interaction(p,r,spin_strings(j,q),r)
                do s=1,n_spin
                   temp_state2 = spin_annihilation_creation_matrix(r,spin_strings(temp_state1,s),temp_state1,1)
@@ -843,10 +843,10 @@ end if
 end subroutine fill_nr_single_spin_hamiltonian
 
 
-subroutine nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,norb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
-integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
-integer, intent (in) :: alpha_annihilation_creation_matrix(norb,norb,n_strings_alpha,2), beta_annihilation_creation_matrix(norb,norb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-complex(8), intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(norb,norb,norb,norb)
+subroutine nr_matrix_vector_product(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction_mix,n_orb,alpha_annihilation_creation_matrix,beta_annihilation_creation_matrix,vector,vector_new)
+integer, intent (in) :: n_strings_alpha,n_strings_beta,n_orb, n_alpha, n_beta
+integer, intent (in) :: alpha_annihilation_creation_matrix(n_orb,n_orb,n_strings_alpha,2), beta_annihilation_creation_matrix(n_orb,n_orb,n_strings_beta,2), strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
+complex(8), intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction_mix(n_orb,n_orb,n_orb,n_orb)
 complex(8), intent (inout) :: vector_new(n_strings_alpha*n_strings_beta),vector(n_strings_alpha*n_strings_beta)
 complex(8) :: temp_table(n_strings_alpha,n_strings_beta), new_table(n_strings_alpha,n_strings_beta)
 integer :: mu, i,j,k,l, p,q,r,s,temp_state1,temp_state2,temp_sign1,temp_sign2
@@ -879,12 +879,12 @@ do i=1,n_strings_alpha
          end if
       end do
       do p=1,n_alpha
-         do r=1,norb
+         do r=1,n_orb
             temp_state1 = alpha_annihilation_creation_matrix(r,strings_alpha(i,p),i,1)
             if (temp_state1 .ne. 0) then
                temp_sign1 = alpha_annihilation_creation_matrix(r,strings_alpha(i,p),i,2)
                do q=1,n_beta
-                  do s=1,norb
+                  do s=1,n_orb
                      temp_state2 = beta_annihilation_creation_matrix(s,strings_beta(j,q),j,1)
                      if (temp_state2 .ne. 0) then
                         temp_sign2 = temp_sign1*beta_annihilation_creation_matrix(s,strings_beta(j,q),j,2)
@@ -912,7 +912,7 @@ end subroutine nr_matrix_vector_product
 
 
 subroutine rel_matrix_vector_product(dane,vector,vector_new)
-type(t_params), intent(inout) :: dane
+type(parameters), intent(inout) :: dane
 complex(8), intent(inout) :: vector(dane%n_strings_alpha*dane%n_strings_beta+dane%n_strings_alpha_p1*dane%n_strings_beta_m1+dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
 complex(8), intent (inout) :: vector_new(dane%n_strings_alpha*dane%n_strings_beta+dane%n_strings_alpha_p1*dane%n_strings_beta_m1+dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
 complex(8) ::  vector_new_1(dane%n_strings_alpha*dane%n_strings_beta),vector_new_2(dane%n_strings_alpha_p1*dane%n_strings_beta_m1),vector_new_3(dane%n_strings_alpha_m1*dane%n_strings_beta_p1)
@@ -925,9 +925,9 @@ vector_new(:) = 0
 vector_new_1(:) = 0
 vector_new_2(:) = 0
 vector_new_3(:) = 0
-call nr_matrix_vector_product(dane%alpha_hamiltonian,dane%str_a,dane%n_strings_alpha,dane%n_alpha,dane%beta_hamiltonian,dane%str_b,dane%n_strings_beta,dane%n_beta,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix,dane%beta_annihilation_creation_matrix,vector(dane%size_tot(1,1):dane%size_tot(1,2)),vector_new_1)
-call nr_matrix_vector_product(dane%alpha_hamiltonian_p1,dane%str_a_p1,dane%n_strings_alpha_p1,dane%n_alpha+1,dane%beta_hamiltonian_m1,dane%str_b_m1,dane%n_strings_beta_m1,dane%n_beta-1,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix_p1,dane%beta_annihilation_creation_matrix_m1,vector(dane%size_tot(2,1):dane%size_tot(1,2)+dane%size_tot(2,2)),vector_new_2)
-call nr_matrix_vector_product(dane%alpha_hamiltonian_m1,dane%str_a_m1,dane%n_strings_alpha_m1,dane%n_alpha-1,dane%beta_hamiltonian_p1,dane%str_b_p1,dane%n_strings_beta_p1,dane%n_beta+1,dane%interaction_mix,dane%norb,dane%alpha_annihilation_creation_matrix_m1,dane%beta_annihilation_creation_matrix_p1,vector(dane%size_tot(3,1):dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2)),vector_new_3)
+call nr_matrix_vector_product(dane%alpha_hamiltonian,dane%str_a,dane%n_strings_alpha,dane%n_alpha,dane%beta_hamiltonian,dane%str_b,dane%n_strings_beta,dane%n_beta,dane%interaction_mix,dane%n_orb,dane%alpha_annihilation_creation_matrix,dane%beta_annihilation_creation_matrix,vector(dane%size_tot(1,1):dane%size_tot(1,2)),vector_new_1)
+call nr_matrix_vector_product(dane%alpha_hamiltonian_p1,dane%str_a_p1,dane%n_strings_alpha_p1,dane%n_alpha+1,dane%beta_hamiltonian_m1,dane%str_b_m1,dane%n_strings_beta_m1,dane%n_beta-1,dane%interaction_mix,dane%n_orb,dane%alpha_annihilation_creation_matrix_p1,dane%beta_annihilation_creation_matrix_m1,vector(dane%size_tot(2,1):dane%size_tot(1,2)+dane%size_tot(2,2)),vector_new_2)
+call nr_matrix_vector_product(dane%alpha_hamiltonian_m1,dane%str_a_m1,dane%n_strings_alpha_m1,dane%n_alpha-1,dane%beta_hamiltonian_p1,dane%str_b_p1,dane%n_strings_beta_p1,dane%n_beta+1,dane%interaction_mix,dane%n_orb,dane%alpha_annihilation_creation_matrix_m1,dane%beta_annihilation_creation_matrix_p1,vector(dane%size_tot(3,1):dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2)),vector_new_3)
 do i = 1, dane%n_strings_alpha*dane%n_strings_beta
    if (vector_new_1(i) /= vector_new_1(i)) then
       print *, "NaN pojawił się w pętli 1 dla i =", i
@@ -1081,7 +1081,7 @@ end subroutine rel_matrix_vector_product
 
   subroutine matrix_vector_product(dane, vector, vector_new)
     implicit none
-    type(t_params), intent(inout) :: dane
+    type(parameters), intent(inout) :: dane
     complex(8), intent(inout) :: vector(:)
     complex(8), intent(inout) :: vector_new(:)
     !integer, intent(in) :: n
@@ -1091,17 +1091,17 @@ end subroutine rel_matrix_vector_product
       call rel_matrix_vector_product(dane, vector, vector_new)
     else
 
-      call nr_matrix_vector_product(dane%alpha_hamiltonian, dane%str_a, dane%n_strings_alpha, dane%n_alpha, dane%beta_hamiltonian, dane%str_b, dane%n_strings_beta, dane%n_beta, dane%interaction_mix, dane%norb, dane%alpha_annihilation_creation_matrix, dane%beta_annihilation_creation_matrix, vector, vector_new)
+      call nr_matrix_vector_product(dane%alpha_hamiltonian, dane%str_a, dane%n_strings_alpha, dane%n_alpha, dane%beta_hamiltonian, dane%str_b, dane%n_strings_beta, dane%n_beta, dane%interaction_mix, dane%n_orb, dane%alpha_annihilation_creation_matrix, dane%beta_annihilation_creation_matrix, vector, vector_new)
     end if
   end subroutine matrix_vector_product
 
 
 
 
-subroutine generate_diagonal_elements(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,norb,diagonal)
-integer, intent (in) :: n_strings_alpha,n_strings_beta,norb, n_alpha, n_beta
+subroutine generate_diagonal_elements(alpha_hamiltonian,strings_alpha,n_strings_alpha,n_alpha,beta_hamiltonian,strings_beta,n_strings_beta,n_beta,interaction,n_orb,diagonal)
+integer, intent (in) :: n_strings_alpha,n_strings_beta,n_orb, n_alpha, n_beta
 integer, intent (in) :: strings_alpha(n_strings_alpha,n_alpha), strings_beta(n_strings_beta,n_beta)
-complex(8), intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(norb,norb,norb,norb)
+complex(8), intent (in) :: alpha_hamiltonian(n_strings_alpha,n_strings_alpha), beta_hamiltonian(n_strings_beta,n_strings_beta), interaction(n_orb,n_orb,n_orb,n_orb)
 complex(8), intent(out) :: diagonal(n_strings_alpha*n_strings_beta)
 integer :: mu,i,j,p,q
 complex(8) :: temp_diagonal(n_strings_alpha*n_strings_beta)
@@ -1118,18 +1118,32 @@ end do
 diagonal = temp_diagonal
 end subroutine generate_diagonal_elements
 
-subroutine generate_dane(dane,norb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta)
+subroutine generate_params(dane,relativistic,n_orb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix, hso_ab, hso_ba)
    implicit none
-   type(t_params), intent(inout) :: dane
-   integer, intent(in) :: norb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt, active_space
-   integer, intent(in) :: RAS_space_occ(n_RAS_spaces_occ), RAS_space_virt(n_RAS_spaces_virt), excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
-   complex(8), intent(in) :: hopping_alpha(norb,norb),hopping_beta(norb,norb),interaction_alpha(norb,norb,norb,norb),interaction_beta(norb,norb,norb,norb)
-   real, intent(in) :: orbital_energies(:)
+   type(parameters), intent(inout) :: dane
+   logical, intent(in) :: relativistic
+   integer, intent(in) :: n_orb, n_alpha, n_beta, n_RAS_spaces_occ, n_RAS_spaces_virt, active_space
+   integer, intent(in):: RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt),excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt)
+   real(8), intent(in) :: orbital_energies(n_orb)
+   complex(8), intent(inout) :: hopping_alpha(n_orb,n_orb),hopping_beta(n_orb,n_orb),interaction_alpha(n_orb,n_orb,n_orb,n_orb),interaction_beta(n_orb,n_orb,n_orb,n_orb), interaction_mix(n_orb,n_orb,n_orb,n_orb), hso_ab(n_orb,n_orb), hso_ba(n_orb,n_orb)
    integer :: max,n_spaces,n_combinations, temp, n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta
    integer :: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2)
    integer :: i,j
    integer, allocatable :: all_combinations(:,:),RAS_el_array_alpha(:,:),RAS_el_array_beta(:,:)
+   call check_orbital_space_declarations(n_orb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
 
+   call check_hamiltonian(relativistic,n_orb,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix,hso_ab,hso_ba)
+
+   allocate(dane%interaction_mix(n_orb,n_orb,n_orb,n_orb))
+   allocate(dane%hso_ab(n_orb,n_orb))
+   allocate(dane%hso_ba(n_orb,n_orb))
+
+   dane%relativistic = relativistic
+   dane%interaction_mix = interaction_mix
+   dane%hso_ab = hso_ab
+   dane%hso_ba = hso_ba
+   dane%n_alpha = n_alpha
+   dane%n_beta = n_beta
    ! calculate all combinations of assigning electrons to spaces
    max = MAXVAL([RAS_space_occ,active_space,RAS_space_virt])
    n_spaces = n_RAS_spaces_occ+1+n_RAS_spaces_virt
@@ -1198,7 +1212,7 @@ subroutine generate_dane(dane,norb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_
 
 if (n_alpha .gt. 0)  then
   allocate(dane%str_a(sizea(1,2),n_alpha))
-  call fill_spin_strings(orbital_energies,norb,n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),dane%str_a)
+  call fill_spin_strings(orbital_energies,n_orb,n_alpha,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(1,1),NRDa(1,2),sizea(1,2),dane%str_a)
 else if (n_alpha .eq. 0)  then
   allocate(dane%str_a(sizea(1,2),1))
   dane%str_a(sizea(1,2),:) = 0 !vacuum  
@@ -1206,7 +1220,7 @@ end if
 
 if (n_beta .gt. 0) then
   allocate(dane%str_b(sizeb(1,2),n_beta))
-  call fill_spin_strings(orbital_energies,norb,n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),dane%str_b)
+  call fill_spin_strings(orbital_energies,n_orb,n_beta,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(1,1),NRDb(1,2),sizeb(1,2),dane%str_b)
 else if  (n_beta .eq. 0)  then
   allocate(dane%str_b(sizeb(1,2),1))
   dane%str_b(sizeb(1,2),:) = 0 !vacuum  
@@ -1214,26 +1228,26 @@ end if
 
 !here we generate creation-annihilation matrices for first block
 
-allocate(dane%alpha_annihilation_creation_matrix(norb,norb,sizea(1,2),2))  
-call fill_annihilation_creation_matrix(n_alpha,sizea(1,2),dane%str_a,norb,dane%alpha_annihilation_creation_matrix)
+allocate(dane%alpha_annihilation_creation_matrix(n_orb,n_orb,sizea(1,2),2))  
+call fill_annihilation_creation_matrix(n_alpha,sizea(1,2),dane%str_a,n_orb,dane%alpha_annihilation_creation_matrix)
 
-allocate(dane%beta_annihilation_creation_matrix(norb,norb,sizeb(1,2),2))
-call fill_annihilation_creation_matrix(n_beta,sizeb(1,2),dane%str_b,norb,dane%beta_annihilation_creation_matrix)
+allocate(dane%beta_annihilation_creation_matrix(n_orb,n_orb,sizeb(1,2),2))
+call fill_annihilation_creation_matrix(n_beta,sizeb(1,2),dane%str_b,n_orb,dane%beta_annihilation_creation_matrix)
 
 !here we generate single spin part of hamiltonian for first block
 
 allocate(dane%alpha_hamiltonian(sizea(1,2),sizea(1,2)))
 allocate(dane%beta_hamiltonian(sizeb(1,2),sizeb(1,2)))
 
-call fill_nr_single_spin_hamiltonian(dane%str_a,sizea(1,2),n_alpha,norb,hopping_alpha,interaction_alpha,dane%alpha_annihilation_creation_matrix,dane%alpha_hamiltonian)
-call fill_nr_single_spin_hamiltonian(dane%str_b,sizeb(1,2),n_beta,norb,hopping_beta,interaction_beta,dane%beta_annihilation_creation_matrix,dane%beta_hamiltonian)
+call fill_nr_single_spin_hamiltonian(dane%str_a,sizea(1,2),n_alpha,n_orb,hopping_alpha,interaction_alpha,dane%alpha_annihilation_creation_matrix,dane%alpha_hamiltonian)
+call fill_nr_single_spin_hamiltonian(dane%str_b,sizeb(1,2),n_beta,n_orb,hopping_beta,interaction_beta,dane%beta_annihilation_creation_matrix,dane%beta_hamiltonian)
 
 ! here we prepare for matrix-vector multiplication
 
 
 allocate(dane%diag(dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2)))
 
-call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_alpha,dane%beta_hamiltonian,dane%str_b,sizeb(1,2),n_beta,dane%interaction_mix,norb,dane%diag(1:dane%size_tot(1,2)))
+call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_alpha,dane%beta_hamiltonian,dane%str_b,sizeb(1,2),n_beta,dane%interaction_mix,n_orb,dane%diag(1:dane%size_tot(1,2)))
 !here we repeat for other blocks
 
 
@@ -1243,7 +1257,7 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     if (n_alpha .gt. 1)  then
         allocate(dane%str_a_m1(sizea(3,2),n_alpha-1))
         if (sizea(3,2) .ne. 0) then
-            call fill_spin_strings(orbital_energies,norb,n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),dane%str_a_m1)
+            call fill_spin_strings(orbital_energies,n_orb,n_alpha-1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(3,1),NRDa(3,2),sizea(3,2),dane%str_a_m1)
         end if
     else if (n_alpha .eq. 1) then
         allocate(dane%str_a_m1(sizea(3,2),1))
@@ -1255,7 +1269,7 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     if (n_beta .gt. 1)  then
         allocate(dane%str_b_m1(sizeb(3,2),n_beta-1))
         if (sizeb(3,2) .ne. 0) then
-            call fill_spin_strings(orbital_energies,norb,n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),dane%str_b_m1)
+            call fill_spin_strings(orbital_energies,n_orb,n_beta-1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(3,1),NRDb(3,2),sizeb(3,2),dane%str_b_m1)
         end if
     else if (n_beta .eq. 1) then
         allocate(dane%str_b_m1(sizeb(3,2),1))
@@ -1266,80 +1280,80 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     
     allocate(dane%str_a_p1(sizea(2,2),n_alpha+1))
     if (sizea(2,2) .ne. 0) then
-     call fill_spin_strings(orbital_energies,norb,n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),dane%str_a_p1)
+     call fill_spin_strings(orbital_energies,n_orb,n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),dane%str_a_p1)
     end if
       
     allocate(dane%str_b_p1(sizeb(2,2),n_beta+1)) 
     if (sizeb(2,2) .ne. 0) then
-        call fill_spin_strings(orbital_energies,norb,n_beta+1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(2,1),NRDb(2,2),sizeb(2,2),dane%str_b_p1)
+        call fill_spin_strings(orbital_energies,n_orb,n_beta+1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(2,1),NRDb(2,2),sizeb(2,2),dane%str_b_p1)
     end if
 
 !here we generate annihilation, creation-annihilation and single spin hamiltonians
       
-    allocate(dane%alpha_annihilation_matrix(norb,sizea(1,2),2))
-    allocate(dane%alpha_annihilation_creation_matrix_m1(norb,norb,sizea(3,2),2))
+    allocate(dane%alpha_annihilation_matrix(n_orb,sizea(1,2),2))
+    allocate(dane%alpha_annihilation_creation_matrix_m1(n_orb,n_orb,sizea(3,2),2))
     allocate(dane%alpha_hamiltonian_m1(sizea(3,2),sizea(3,2)))
 
     if (sizea(3,2) .ne. 0) then      
-        call fill_annihilation_results(sizea(3,2),sizea(1,2),n_alpha,dane%str_a_m1,dane%str_a,norb,dane%alpha_annihilation_matrix)
-        call fill_annihilation_creation_matrix(n_alpha-1,sizea(3,2),dane%str_a_m1,norb,dane%alpha_annihilation_creation_matrix_m1)
-        call fill_nr_single_spin_hamiltonian(dane%str_a_m1,sizea(3,2),n_alpha-1,norb,hopping_alpha,interaction_alpha,dane%alpha_annihilation_creation_matrix_m1,dane%alpha_hamiltonian_m1)
+        call fill_annihilation_results(sizea(3,2),sizea(1,2),n_alpha,dane%str_a_m1,dane%str_a,n_orb,dane%alpha_annihilation_matrix)
+        call fill_annihilation_creation_matrix(n_alpha-1,sizea(3,2),dane%str_a_m1,n_orb,dane%alpha_annihilation_creation_matrix_m1)
+        call fill_nr_single_spin_hamiltonian(dane%str_a_m1,sizea(3,2),n_alpha-1,n_orb,hopping_alpha,interaction_alpha,dane%alpha_annihilation_creation_matrix_m1,dane%alpha_hamiltonian_m1)
     end if
     
-    allocate(dane%beta_annihilation_matrix(norb,sizeb(1,2),2))
-    allocate(dane%beta_annihilation_creation_matrix_m1(norb,norb,sizeb(3,2),2))
+    allocate(dane%beta_annihilation_matrix(n_orb,sizeb(1,2),2))
+    allocate(dane%beta_annihilation_creation_matrix_m1(n_orb,n_orb,sizeb(3,2),2))
     allocate(dane%beta_hamiltonian_m1(sizeb(3,2),sizeb(3,2)))
     
     if (sizeb(3,2) .ne. 0) then      
-        call fill_annihilation_results(sizeb(3,2),sizeb(1,2),n_beta,dane%str_b_m1,dane%str_b,norb,dane%beta_annihilation_matrix)
-        call fill_annihilation_creation_matrix(n_beta-1,sizeb(3,2),dane%str_b_m1,norb,dane%beta_annihilation_creation_matrix_m1)
-        call fill_nr_single_spin_hamiltonian(dane%str_b_m1,sizeb(3,2),n_beta-1,norb,hopping_beta,interaction_beta,dane%beta_annihilation_creation_matrix_m1,dane%beta_hamiltonian_m1)
+        call fill_annihilation_results(sizeb(3,2),sizeb(1,2),n_beta,dane%str_b_m1,dane%str_b,n_orb,dane%beta_annihilation_matrix)
+        call fill_annihilation_creation_matrix(n_beta-1,sizeb(3,2),dane%str_b_m1,n_orb,dane%beta_annihilation_creation_matrix_m1)
+        call fill_nr_single_spin_hamiltonian(dane%str_b_m1,sizeb(3,2),n_beta-1,n_orb,hopping_beta,interaction_beta,dane%beta_annihilation_creation_matrix_m1,dane%beta_hamiltonian_m1)
     end if
  
 
-    allocate(dane%alpha_annihilation_matrix_p1(norb,sizea(2,2),2))
-    allocate(dane%alpha_annihilation_creation_matrix_p1(norb,norb,sizea(2,2),2))
+    allocate(dane%alpha_annihilation_matrix_p1(n_orb,sizea(2,2),2))
+    allocate(dane%alpha_annihilation_creation_matrix_p1(n_orb,n_orb,sizea(2,2),2))
     allocate(dane%alpha_hamiltonian_p1(sizea(2,2),sizea(2,2)))
     
     if (sizea(2,2) .ne. 0) then
-        call fill_spin_strings(orbital_energies,norb,n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),dane%str_a_p1)
-        call fill_annihilation_results(sizea(1,2),sizea(2,2),n_alpha+1,dane%str_a,dane%str_a_p1,norb,dane%alpha_annihilation_matrix_p1)
-        call fill_annihilation_creation_matrix(n_alpha+1,sizea(2,2),dane%str_a_p1,norb,dane%alpha_annihilation_creation_matrix_p1)
-        call fill_nr_single_spin_hamiltonian(dane%str_a_p1,sizea(2,2),n_alpha+1,norb,hopping_alpha,interaction_alpha,dane%alpha_annihilation_creation_matrix_p1,dane%alpha_hamiltonian_p1)
+        call fill_spin_strings(orbital_energies,n_orb,n_alpha+1,NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDa(2,1),NRDa(2,2),sizea(2,2),dane%str_a_p1)
+        call fill_annihilation_results(sizea(1,2),sizea(2,2),n_alpha+1,dane%str_a,dane%str_a_p1,n_orb,dane%alpha_annihilation_matrix_p1)
+        call fill_annihilation_creation_matrix(n_alpha+1,sizea(2,2),dane%str_a_p1,n_orb,dane%alpha_annihilation_creation_matrix_p1)
+        call fill_nr_single_spin_hamiltonian(dane%str_a_p1,sizea(2,2),n_alpha+1,n_orb,hopping_alpha,interaction_alpha,dane%alpha_annihilation_creation_matrix_p1,dane%alpha_hamiltonian_p1)
     end if
 
-    allocate(dane%beta_annihilation_matrix_p1(norb,sizeb(2,2),2))  
-    allocate(dane%beta_annihilation_creation_matrix_p1(norb,norb,sizeb(2,2),2))
+    allocate(dane%beta_annihilation_matrix_p1(n_orb,sizeb(2,2),2))  
+    allocate(dane%beta_annihilation_creation_matrix_p1(n_orb,n_orb,sizeb(2,2),2))
     allocate(dane%beta_hamiltonian_p1(sizeb(2,2),sizeb(2,2)))   
 
     if (sizeb(2,2) .ne. 0) then
-        call fill_spin_strings(orbital_energies,norb,n_beta+1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(2,1),NRDb(2,2),sizeb(2,2),dane%str_b_p1)
-        call fill_annihilation_results(sizeb(1,2),sizeb(2,2),n_beta+1,dane%str_b,dane%str_b_p1,norb,dane%beta_annihilation_matrix_p1)
-        call fill_annihilation_creation_matrix(n_beta+1,sizeb(2,2),dane%str_b_p1,norb,dane%beta_annihilation_creation_matrix_p1)
-        call fill_nr_single_spin_hamiltonian(dane%str_b_p1,sizeb(2,2),n_beta+1,norb,hopping_beta,interaction_beta,dane%beta_annihilation_creation_matrix_p1,dane%beta_hamiltonian_p1)
+        call fill_spin_strings(orbital_energies,n_orb,n_beta+1,NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,NRDb(2,1),NRDb(2,2),sizeb(2,2),dane%str_b_p1)
+        call fill_annihilation_results(sizeb(1,2),sizeb(2,2),n_beta+1,dane%str_b,dane%str_b_p1,n_orb,dane%beta_annihilation_matrix_p1)
+        call fill_annihilation_creation_matrix(n_beta+1,sizeb(2,2),dane%str_b_p1,n_orb,dane%beta_annihilation_creation_matrix_p1)
+        call fill_nr_single_spin_hamiltonian(dane%str_b_p1,sizeb(2,2),n_beta+1,n_orb,hopping_beta,interaction_beta,dane%beta_annihilation_creation_matrix_p1,dane%beta_hamiltonian_p1)
     end if
 
 ! here we generate hamiltonian diagonal elements
     if (dane%size_tot(2,2) .ne. 0) then
-        call generate_diagonal_elements(dane%alpha_hamiltonian_p1,dane%str_a_p1,sizea(2,2),n_alpha+1,dane%beta_hamiltonian_m1,dane%str_b_m1,sizeb(3,2),n_beta-1,dane%interaction_mix,norb,dane%diag(dane%size_tot(2,1):dane%size_tot(2,2)+dane%size_tot(1,2)))
+        call generate_diagonal_elements(dane%alpha_hamiltonian_p1,dane%str_a_p1,sizea(2,2),n_alpha+1,dane%beta_hamiltonian_m1,dane%str_b_m1,sizeb(3,2),n_beta-1,dane%interaction_mix,n_orb,dane%diag(dane%size_tot(2,1):dane%size_tot(2,2)+dane%size_tot(1,2)))
     end if
 
     if (dane%size_tot(3,2) .ne. 0) then 
-        call generate_diagonal_elements(dane%alpha_hamiltonian_m1,dane%str_a_m1,sizea(3,2),n_alpha-1,dane%beta_hamiltonian_p1,dane%str_b_p1,sizeb(2,2),n_beta+1,dane%interaction_mix,norb,dane%diag(dane%size_tot(3,1):dane%size_tot(3,2)+dane%size_tot(2,2)+dane%size_tot(1,2)))
+        call generate_diagonal_elements(dane%alpha_hamiltonian_m1,dane%str_a_m1,sizea(3,2),n_alpha-1,dane%beta_hamiltonian_p1,dane%str_b_p1,sizeb(2,2),n_beta+1,dane%interaction_mix,n_orb,dane%diag(dane%size_tot(3,1):dane%size_tot(3,2)+dane%size_tot(2,2)+dane%size_tot(1,2)))
     end if
 dane%n_strings_alpha = sizea(1,2)
 dane%n_strings_beta = sizeb(1,2)
-dane%norb = norb
+dane%n_orb = n_orb
 dane%n_alpha = n_alpha
 dane%n_beta = n_beta
 dane%n_strings_alpha_p1 = sizea(2,2)
 dane%n_strings_beta_p1 = sizeb(2,2)
 dane%n_strings_alpha_m1 = sizea(3,2)
 dane%n_strings_beta_m1 = sizeb(3,2)
-end subroutine generate_dane
+end subroutine generate_params
 
 subroutine create_electron(orbital,state,new_state,dane,new_dane,spin)
-type(t_params), intent(in) :: dane, new_dane
+type(parameters), intent(in) :: dane, new_dane
 integer, intent(in) :: orbital
 integer,intent(in) :: spin
 complex(8), intent(in) :: state(dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2))
@@ -1467,7 +1481,7 @@ end if
 end subroutine create_electron
 
 subroutine create_hole(orbital,state,new_state,dane,new_dane,spin)
-type(t_params), intent(in) :: dane, new_dane
+type(parameters), intent(in) :: dane, new_dane
 integer, intent(in) :: orbital
 integer, intent(in) :: spin
 complex(8), intent(in) :: state(dane%size_tot(1,2) + dane%size_tot(2,2) + dane%size_tot(3,2))
@@ -1590,7 +1604,7 @@ end if
 end subroutine create_hole
 
 subroutine diff_spin_product(new_state_alpha,new_dane_alpha,new_state_beta,new_dane_beta,scalar_product)
-type(t_params), intent(in) :: new_dane_alpha, new_dane_beta
+type(parameters), intent(in) :: new_dane_alpha, new_dane_beta
 complex(8), intent(in) :: new_state_alpha(new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2)+new_dane_alpha%size_tot(3,2)),new_state_beta(new_dane_beta%size_tot(1,2)+new_dane_beta%size_tot(2,2)+new_dane_beta%size_tot(3,2))
 complex(8), intent(out) :: scalar_product
 integer :: i
@@ -1615,7 +1629,7 @@ end if
 end subroutine diff_spin_product
 
 subroutine calc_fraction_diag(ground_state,dane,new_dane,z,orbital,spin,e_or_h,krylov_size,fraction)
-type(t_params), intent(inout) :: dane, new_dane
+type(parameters), intent(inout) :: dane, new_dane
 complex(8), intent(in) :: ground_state(dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2))
 complex(8), intent(in) :: z
 integer, intent(in) :: orbital, krylov_size
@@ -1692,7 +1706,7 @@ end subroutine calc_fraction_diag
 
 
 subroutine calc_gf_matrix_element(ground_state,dane,new_dane1,new_dane2,z,orbital1,orbital2,spin1,spin2,e_or_h,krylov_size,gf_matrix_element)
-type(t_params), intent(inout) :: dane, new_dane1, new_dane2
+type(parameters), intent(inout) :: dane, new_dane1, new_dane2
 complex(8), intent(in) :: ground_state(dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2))
 complex(8), intent(in) :: z
 integer, intent(in) :: orbital1, orbital2, krylov_size

@@ -4,7 +4,7 @@ module module_for_slepc
   use library_rel_ed  
   implicit none
 
-  type(t_params), pointer :: ptr_dane
+  type(parameters), pointer :: ptr_dane
   complex(8), pointer       :: ptr_przekatna(:)
   integer                :: n_rozmiar
 
