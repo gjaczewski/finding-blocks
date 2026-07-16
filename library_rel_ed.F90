@@ -1,4 +1,6 @@
+#include <slepc/finclude/slepceps.h>
 module library_rel_ed
+use slepceps
 type :: parameters
     sequence
     integer :: n_strings_alpha, n_strings_beta, n_orb
@@ -23,12 +25,52 @@ type :: parameters
     complex(8), allocatable :: interaction_mix(:,:,:,:), hso_ab(:,:), hso_ba(:,:)
     complex(8), allocatable :: alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:)
     complex(8), allocatable :: alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
-    complex(8), allocatable :: diag(:)
+    complex(8), allocatable:: diag(:)
+    real(8) :: nuclear_energy
     logical :: relativistic
 end type parameters
-
+  
+  type(parameters), pointer :: ptr_dane
+  complex(8), pointer       :: ptr_przekatna(:)
+  integer                :: n_rozmiar
 contains
+subroutine WrapperMatMult(A, x, y, ierr)
+    Mat :: A
+    Vec :: x, y
+    PetscErrorCode :: ierr
+    PetscScalar, pointer :: tablica_x(:), tablica_y(:)
 
+
+    
+    call VecGetArrayRead(x, tablica_x, ierr)
+    call VecGetArray(y, tablica_y, ierr)
+
+    call matrix_vector_product(ptr_dane, tablica_x, tablica_y)
+
+
+    call VecRestoreArrayRead(x, tablica_x, ierr)
+    call VecRestoreArray(y, tablica_y, ierr)
+
+    ierr = 0
+  end subroutine WrapperMatMult
+
+  subroutine WrapperMatGetDiagonal(A, diag, ierr)
+    Mat :: A
+    Vec :: diag
+    PetscErrorCode :: ierr
+    PetscScalar, pointer :: tablica_diag(:)
+    integer :: i
+
+    call VecGetArray(diag, tablica_diag, ierr)
+
+    do i = 1, n_rozmiar
+      tablica_diag(i) = ptr_przekatna(i)
+    end do
+
+    call VecRestoreArray(diag, tablica_diag, ierr)
+
+    ierr = 0
+  end subroutine WrapperMatGetDiagonal
 subroutine check_orbital_space_declarations(n_orb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
 
   implicit none
@@ -675,7 +717,7 @@ end if
 end subroutine sort_states
 
 
-subroutine ISEQUAL(vector1,vector2,length,indicator)
+subroutine IS_EQUAL(vector1,vector2,length,indicator)
 implicit none
     integer, intent(in) :: length
     logical, intent(inout) :: indicator
@@ -690,7 +732,7 @@ implicit none
          exit
         end if
     end do
-end subroutine ISEQUAL
+end subroutine IS_EQUAL
 
 
 
@@ -747,7 +789,7 @@ do i=1,n_spin_strings
    do j=1,n_spin
       call annihilation(spin_strings(i,j),spin_strings(i,:),n_spin,temp_string,sign)
       do k=1,n_spin_strings_m1
-         call ISEQUAL(temp_string,spin_strings_m1(k,:),n_spin-1,indicator)
+         call IS_EQUAL(temp_string,spin_strings_m1(k,:),n_spin-1,indicator)
          if (indicator .eqv. .true.) then
             spin_annihilation_matrix(spin_strings(i,j),i,1) = k
             spin_annihilation_matrix(spin_strings(i,j),i,2) = sign
@@ -788,7 +830,7 @@ do i=1,n_spin_strings
       do k=1,n_spin_strings
          do l=1,n_spin
             call annihilation(spin_strings(k,l),spin_strings(k,:),n_spin,temp_string2,sign2)
-            call ISEQUAL(temp_string1,temp_string2,n_spin-1,indicator)
+            call IS_EQUAL(temp_string1,temp_string2,n_spin-1,indicator)
             if (indicator .eqv. .true.) then
                annihilation_creation_matrix(spin_strings(i,j),spin_strings(k,l),k,1) = i
                annihilation_creation_matrix(spin_strings(i,j),spin_strings(k,l),k,2) = sign1*sign2
@@ -1814,5 +1856,85 @@ call calc_fraction_diag(ground_state,dane,new_dane2,z,orbital2,spin2,e_or_h,kryl
 
 gf_matrix_element = 0.5*(fraction_plus - fraction1 - fraction2)
 end subroutine calc_gf_matrix_element
+
+
+subroutine eigensystem(params,n_pairs,eigenenergies,eigenstates)
+type(parameters),target, intent(in) :: params
+integer, intent(in) :: n_pairs
+real(8), intent(inout) :: eigenenergies(n_pairs)
+complex(8), intent(inout) :: eigenstates(n_pairs,params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)) 
+integer :: N
+PetscScalar          :: real_part, imaginary_part
+Vec                  :: vector_petsc, im_vector_petsc
+PetscScalar, pointer :: tablica_wynikowa(:)
+PetscErrorCode :: ierr
+Mat            :: A
+EPS            :: eps
+integer              :: nconv
+complex(8),target :: diagonal(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2))
+call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
+diagonal = params%diag
+ptr_dane => params
+ptr_przekatna => diagonal
+N = params%size_tot(1,2) + params%size_tot(2,2) + params%size_tot(3,2)
+
+
+call MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, &
+                      N, N, PETSC_NULL_INTEGER, A, ierr)
+
+call MatShellSetOperation(A, MATOP_MULT, WrapperMatMult, ierr)
+call MatShellSetOperation(A, MATOP_GET_DIAGONAL, WrapperMatGetDiagonal, ierr)
+
+call EPSCreate(PETSC_COMM_WORLD, eps, ierr)
+call EPSSetOperators(eps, A, PETSC_NULL_MAT, ierr)
+
+call EPSSetProblemType(eps, EPS_HEP, ierr)
+
+call EPSSetType(eps,EPSJD, ierr)
+  
+  
+call EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL, ierr)
+call EPSSetDimensions(eps, n_pairs, PETSC_DECIDE, PETSC_DECIDE, ierr)
+call EPSSetFromOptions(eps, ierr)
+  
+  
+call EPSSolve(eps, ierr)
+if (ierr .ne. 0) then
+    print *, "BŁĄD: EPSSolve nie powiodło się! Kod:", ierr
+    stop
+end if
+call EPSGetConverged(eps, nconv, ierr)
+print *, "Solver found ", nconv, " convergent eigenvalues."
+call MatCreateVecs(A, vector_petsc, im_vector_petsc, ierr)
+
+do i = 0,nconv - 1
+    
+    call EPSGetEigenpair(eps, i, real_part, imaginary_part, &
+                         vector_petsc, im_vector_petsc, ierr)
+    
+    call VecGetArrayRead(vector_petsc, tablica_wynikowa, ierr)
+    print *, "Eigenvalue no.", i + 1, "=", real(real_part) + params%nuclear_energy
+    if (i .lt. n_pairs) then
+    eigenenergies(i+1) = real(real_part) + params%nuclear_energy
+    eigenstates(i+1,:) = tablica_wynikowa
+    end if
+  end do
+    
+
+call VecRestoreArrayRead(vector_petsc, tablica_wynikowa, ierr)
+
+call VecDestroy(vector_petsc, ierr)
+call VecDestroy(im_vector_petsc, ierr)
+
+
+
+call EPSDestroy(eps, ierr)
+call MatDestroy(A, ierr)
+
+call SlepcFinalize(ierr)
+
+nullify(ptr_dane)
+nullify(ptr_przekatna)
+end subroutine eigensystem
 end module library_rel_ed
 

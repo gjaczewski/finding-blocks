@@ -2,7 +2,6 @@
 program main
 use slepceps
 use library_rel_ed
-use module_for_slepc
 implicit none
 
 !********HERE ARE INPUT VARIABLES********
@@ -14,28 +13,25 @@ logical:: relativistic
 complex(8), allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alpha(:,:,:,:),interaction_beta(:,:,:,:),interaction_mix(:,:,:,:), hso_ab(:,:), hso_ba(:,:)
 real(8), allocatable :: orbital_energies(:)
 integer :: krylov_size
-integer :: n_energies = 1
+integer :: n_pairs = 2
 real(8) :: nuclear_energy
 !*********HERE ARE OTHER VARIABLES*********
 
 type(parameters), target, save :: gs_params, gf_params
 complex(8), allocatable :: interaction_temp(:,:)
 integer :: i,j,k,l,p,q
-complex(8), allocatable, target, save :: diagonal(:)
+!complex(8), allocatable, target, save :: diagonal(:)
 complex(8), allocatable :: ground_state(:),new_state(:)
 real(8), allocatable :: eigenenergies(:)
+complex(8), allocatable :: eigenstates(:,:)
 integer :: N
-integer              :: nconv
-PetscScalar          :: real_part, imaginary_part
-Vec                  :: vector_petsc, im_vector_petsc
-PetscScalar, pointer :: tablica_wynikowa(:)
+
+
 real :: start_time, end_time
 real :: total_time
-PetscErrorCode :: ierr
-Mat            :: A
-EPS            :: eps
+
 call cpu_time(start_time)
-call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
+
 
 !*******HERE USER DEFINES VARIABLES********
 
@@ -112,77 +108,14 @@ interaction_beta = interaction_alpha
 interaction_mix = interaction_alpha
 
 
-call check_hamiltonian(relativistic,n_orb,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix,hso_ab,hso_ba)
 call generate_params(gs_params,relativistic,n_orb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
-diagonal = gs_params%diag
-
+!diagonal = gs_params%diag
+gs_params%nuclear_energy = nuclear_energy
 N = gs_params%size_tot(1,2) + gs_params%size_tot(2,2) + gs_params%size_tot(3,2)
+allocate(eigenenergies(n_pairs))
+allocate(eigenstates(n_pairs,N))
 allocate(ground_state(N))
-ptr_dane => gs_params
-ptr_przekatna => diagonal
-allocate(eigenenergies(n_energies))
-
-call MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, &
-                      N, N, PETSC_NULL_INTEGER, A, ierr)
-
-call MatShellSetOperation(A, MATOP_MULT, WrapperMatMult, ierr)
-call MatShellSetOperation(A, MATOP_GET_DIAGONAL, WrapperMatGetDiagonal, ierr)
-
-call EPSCreate(PETSC_COMM_WORLD, eps, ierr)
-call EPSSetOperators(eps, A, PETSC_NULL_MAT, ierr)
-
-call EPSSetProblemType(eps, EPS_HEP, ierr)
-
-call EPSSetType(eps,EPSJD, ierr)
-  
-  
-call EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL, ierr)
-call EPSSetDimensions(eps, n_energies, PETSC_DECIDE, PETSC_DECIDE, ierr)
-call EPSSetFromOptions(eps, ierr)
-  
-  
-call EPSSolve(eps, ierr)
-if (ierr .ne. 0) then
-    print *, "BŁĄD: EPSSolve nie powiodło się! Kod:", ierr
-    stop
-end if
-call EPSGetConverged(eps, nconv, ierr)
-print *, "Solver found ", nconv, " convergent eigenvalues."
-call MatCreateVecs(A, vector_petsc, im_vector_petsc, ierr)
-
-do i = 0,nconv - 1
-    
-    call EPSGetEigenpair(eps, i, real_part, imaginary_part, &
-                         vector_petsc, im_vector_petsc, ierr)
-
-    print *, "Eigenvalue no.", i + 1, "=", real(real_part) + nuclear_energy
-    if (i .lt. n_energies) then
-    eigenenergies(i+1) = real(real_part) + nuclear_energy
-    end if
-  end do
-    
-call EPSGetEigenpair(eps, 0, real_part, imaginary_part, &
-                         vector_petsc, im_vector_petsc, ierr)
-
-
-
-
-call VecGetArrayRead(vector_petsc, tablica_wynikowa, ierr)
-ground_state = tablica_wynikowa
-call VecRestoreArrayRead(vector_petsc, tablica_wynikowa, ierr)
-
-call VecDestroy(vector_petsc, ierr)
-call VecDestroy(im_vector_petsc, ierr)
-
-
-
-call EPSDestroy(eps, ierr)
-call MatDestroy(A, ierr)
-
-call SlepcFinalize(ierr)
-
-nullify(ptr_dane)
-nullify(ptr_przekatna)
+call eigensystem(gs_params,n_pairs,eigenenergies,eigenstates)
 
 
 !HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
@@ -192,7 +125,7 @@ krylov_size = 4
 
 call generate_params(gf_params,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix, hso_ab, hso_ba)
 allocate(new_state(gf_params%size_tot(1,2)+gf_params%size_tot(2,2)+gf_params%size_tot(3,2)))
-call create_electron(1,ground_state,new_state,gs_params,gf_params,1)
+!call create_electron(1,ground_state,new_state,gs_params,gf_params,1)
 
 
 
