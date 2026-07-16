@@ -15,7 +15,7 @@ complex(8), allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alph
 real(8), allocatable :: orbital_energies(:)
 integer :: krylov_size
 integer :: n_energies = 1
-
+real(8) :: nuclear_energy
 !*********HERE ARE OTHER VARIABLES*********
 
 type(parameters), target, save :: gs_params, gf_params
@@ -79,7 +79,7 @@ open(unit = 4, file = "integrals/h_dndn.txt")
 open(unit = 3, file = "integrals/eri_mo.txt")
 open(unit = 5, file = "integrals/h_updn.txt")
 open(unit = 7, file = "integrals/h_dnup.txt")
-
+open(unit = 8, file = "integrals/nuc_energy.txt")
 do i=1,n_orb 
     read(1,*) orbital_energies(i)
     read(2,*) hopping_alpha(i,:)
@@ -87,7 +87,7 @@ do i=1,n_orb
     read(5,*) hso_ab(i,:)
     read(7,*) hso_ba(i,:)
 end do
-
+    read(8,*) nuclear_energy
 allocate(interaction_temp(n_orb**2,n_orb**2))
 do i=1,n_orb**2
     read(3,*) interaction_temp(i,:)
@@ -154,8 +154,7 @@ do i = 0,nconv - 1
     call EPSGetEigenpair(eps, i, real_part, imaginary_part, &
                          vector_petsc, im_vector_petsc, ierr)
 
-    print *, "Eigenvalue no.", i + 1, "=", real(real_part)+0.7151043390810812
-
+    print *, "Eigenvalue no.", i + 1, "=", real(real_part) + nuclear_energy
 
 
   end do

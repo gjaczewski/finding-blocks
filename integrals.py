@@ -4,10 +4,12 @@ relativistic = True
 mol = gto.Mole()
 mol.atom = 'H 0.0 0.0 0.0; H 0 0 0.74'
 mol.basis = 'unc-sto-3g'
+#mol.basis = 'sto-3g'
 mol.spin = 0
 mol.charge = 0
 #mol.verbose = 4 # Żeby widzieć szczegóły iteracji
 mol.build()
+print(mol.energy_nuc())
 nao = mol.nao 
 print(nao)
 if relativistic:
@@ -105,3 +107,5 @@ with open('integrals/eri_mo.txt', 'w') as f:
     for row in eri_flat:
         line = ' '.join(f"({z.real},{z.imag})" for z in row)
         f.write(line + '\n')
+
+np.savetxt("integrals/nuc_energy.txt",[mol.energy_nuc()],delimiter=",")
