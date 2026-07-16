@@ -23,6 +23,7 @@ complex(8), allocatable :: interaction_temp(:,:)
 integer :: i,j,k,l,p,q
 complex(8), allocatable, target, save :: diagonal(:)
 complex(8), allocatable :: ground_state(:),new_state(:)
+real(8), allocatable :: eigenenergies(:)
 integer :: N
 integer              :: nconv
 PetscScalar          :: real_part, imaginary_part
@@ -119,7 +120,7 @@ N = gs_params%size_tot(1,2) + gs_params%size_tot(2,2) + gs_params%size_tot(3,2)
 allocate(ground_state(N))
 ptr_dane => gs_params
 ptr_przekatna => diagonal
-
+allocate(eigenenergies(n_energies))
 
 call MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, &
                       N, N, PETSC_NULL_INTEGER, A, ierr)
@@ -155,8 +156,9 @@ do i = 0,nconv - 1
                          vector_petsc, im_vector_petsc, ierr)
 
     print *, "Eigenvalue no.", i + 1, "=", real(real_part) + nuclear_energy
-
-
+    if (i .lt. n_energies) then
+    eigenenergies(i+1) = real(real_part) + nuclear_energy
+    end if
   end do
     
 call EPSGetEigenpair(eps, 0, real_part, imaginary_part, &
