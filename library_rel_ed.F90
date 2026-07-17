@@ -1389,7 +1389,7 @@ dane%n_strings_beta_p1 = sizeb(2,2)
 dane%n_strings_alpha_m1 = sizea(3,2)
 dane%n_strings_beta_m1 = sizeb(3,2)
 end subroutine generate_params
-
+!!!!!!!!!!!!!!!!!!!!!!!
 subroutine create_electron(orbital,state,new_state,dane,new_dane,spin)
 type(parameters), intent(in) :: dane, new_dane
 integer, intent(in) :: orbital
@@ -1863,7 +1863,7 @@ end if
 
 
 end subroutine calc_gf_matrix_element
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine eigensystem(params,n_pairs,eigenenergies,eigenstates,ierr)
 type(parameters),target, intent(in) :: params

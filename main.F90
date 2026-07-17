@@ -138,6 +138,8 @@ N = params2%size_tot(1,2) + params2%size_tot(2,2) + params2%size_tot(3,2)
 allocate(eigenenergies(2))
 allocate(eigenstates(2,N))
 call eigensystem(params2,2,eigenenergies,eigenstates,ierr)
+write(*,*) abs(eigenstates(1,1))**2+abs(eigenstates(1,2))**2
+write(*,*) abs(eigenstates(2,1))**2+abs(eigenstates(2,2))**2
 allocate(gf1(n_orb,n_orb))
 allocate(gf2(n_orb,n_orb))
 !HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
@@ -148,7 +150,7 @@ gf1(:,:) = 0
 gf2(:,:) = 0
 allocate(new_state1(2))
 allocate(new_state2(2))
-omega = 1
+omega = 0
 
 
 do i=1,n_orb
@@ -159,13 +161,14 @@ do i=1,n_orb
             r1 = 0
             r2 = 0
             do l=1,N
-                r1 = r1 + new_state1(l)*eigenstates(k,l)
+                r1 = r1 + conjg(new_state1(l))*eigenstates(k,l)
                 r2 = r2 + conjg(eigenstates(k,l))*new_state2(l)
             end do
             gf2(i,j) = gf2(i,j) + r1*r2/(omega-eigenenergies(k)+gs_energy)
         end do
     end do
 end do
+write(*,*) "GF:"
 write(*,*) gf2(1,1)
 write(*,*) gf2(2,2)
 write(*,*) gf2(1,2)
@@ -180,6 +183,7 @@ write(*,*) gf1(1,1)
 write(*,*) gf1(2,2)
 write(*,*) gf1(1,2)
 write(*,*) gf1(2,1)
+stop
 write(*,*) "KONIEC"
 call cpu_time(end_time)
 total_time = end_time - start_time
