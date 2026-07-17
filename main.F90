@@ -23,7 +23,7 @@ complex(8), allocatable :: gf1(:,:), gf2(:,:)
 complex(8), allocatable :: interaction_temp(:,:)
 integer :: i,j,k,l,p,q
 !complex(8), allocatable, target, save :: diagonal(:)
-complex(8), allocatable :: ground_state(:), new_state1(:), new_state2(:)
+complex(8), allocatable :: ground_state(:), new_states(:,:),new_state1(:),new_state2(:)
 real(8), allocatable :: eigenenergies(:)
 complex(8), allocatable :: eigenstates(:,:)
 integer :: N
@@ -32,6 +32,7 @@ complex(8) :: omega
 real :: start_time, end_time
 real :: total_time
 complex(8) :: r1,r2
+complex(8) :: maly_hamiltonian(2,2), maly_stan(2)
 call cpu_time(start_time)
 
 
@@ -138,8 +139,6 @@ N = params2%size_tot(1,2) + params2%size_tot(2,2) + params2%size_tot(3,2)
 allocate(eigenenergies(2))
 allocate(eigenstates(2,N))
 call eigensystem(params2,2,eigenenergies,eigenstates,ierr)
-write(*,*) abs(eigenstates(1,1))**2+abs(eigenstates(1,2))**2
-write(*,*) abs(eigenstates(2,1))**2+abs(eigenstates(2,2))**2
 allocate(gf1(n_orb,n_orb))
 allocate(gf2(n_orb,n_orb))
 !HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
@@ -148,31 +147,49 @@ krylov_size = 1000
 !call generate_params(gf_params,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix, hso_ab, hso_ba)
 gf1(:,:) = 0
 gf2(:,:) = 0
-allocate(new_state1(2))
-allocate(new_state2(2))
+allocate(new_states(2,2))
+
 omega = 0
+!call create_electron(1,[(0.0d0,0.0d0),(0.0d0,0.0d0),(0.0d0,0.0d0),(1.0d0,0.0d0)],new_state1,gs_params,params2,1)
+do i=1,n_orb
+    call create_electron(i,ground_state,new_states(i,:),gs_params,params2,1)
+end do
+
+do i=1,2
+    do j=1,2
+        r1 = 0
+        call matrix_vector_product(params2,new_states(j,:),maly_stan)
+        do k=1,N
+            r1 = r1 + conjg(new_states(i,k))*maly_stan(k)
+        end do
+        maly_hamiltonian(i,j) = r1
+    end do
+end do
+write(*,*) maly_hamiltonian(1,:)
+write(*,*) maly_hamiltonian(2,:)
+stop
 
 
 do i=1,n_orb
-    call create_electron(i,ground_state,new_state1,gs_params,params2,1)
-    do j=1,n_orb   
-        call create_electron(j,ground_state,new_state2,gs_params,params2,1)
+    do j=1,n_orb
         do k=1,2
-            r1 = 0
-            r2 = 0
-            do l=1,N
-                r1 = r1 + conjg(new_state1(l))*eigenstates(k,l)
-                r2 = r2 + conjg(eigenstates(k,l))*new_state2(l)
+            r1=0
+            r2=0
+            do l=1,2
+                r1 = r1 + conjg(new_states(i,l))*eigenstates(k,l)
+                r2 = r2 + conjg(eigenstates(k,l))*new_states(j,l)
             end do
             gf2(i,j) = gf2(i,j) + r1*r2/(omega-eigenenergies(k)+gs_energy)
         end do
     end do
 end do
+
 write(*,*) "GF:"
 write(*,*) gf2(1,1)
 write(*,*) gf2(2,2)
 write(*,*) gf2(1,2)
 write(*,*) gf2(2,1)
+stop
 do i=1,n_orb
     do j=1,n_orb
         call calc_gf_matrix_element(ground_state,gs_energy,gs_params,params2,params2,omega,i,j,1,1,1,krylov_size,gf1(i,j))
