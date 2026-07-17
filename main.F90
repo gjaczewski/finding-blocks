@@ -13,30 +13,32 @@ logical:: relativistic
 complex(8), allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alpha(:,:,:,:),interaction_beta(:,:,:,:),interaction_mix(:,:,:,:), hso_ab(:,:), hso_ba(:,:)
 real(8), allocatable :: orbital_energies(:)
 integer :: krylov_size
-integer :: n_pairs = 2
+integer :: n_pairs = 5
+
 real(8) :: nuclear_energy
 !*********HERE ARE OTHER VARIABLES*********
-
-type(parameters), target, save :: gs_params, gf_params
+PetscErrorCode :: ierr
+type(parameters), target, save :: gs_params, params2
+complex(8), allocatable :: gf1(:,:), gf2(:,:)
 complex(8), allocatable :: interaction_temp(:,:)
 integer :: i,j,k,l,p,q
 !complex(8), allocatable, target, save :: diagonal(:)
-complex(8), allocatable :: ground_state(:),new_state(:)
+complex(8), allocatable :: ground_state(:), new_state1(:), new_state2(:)
 real(8), allocatable :: eigenenergies(:)
 complex(8), allocatable :: eigenstates(:,:)
 integer :: N
-
-
+real(8) :: gs_energy
+complex(8) :: omega
 real :: start_time, end_time
 real :: total_time
-
+complex(8) :: r1,r2
 call cpu_time(start_time)
 
 
 !*******HERE USER DEFINES VARIABLES********
 
-relativistic=.true.
-n_orb = 6
+relativistic=.false.
+n_orb = 2
 n_alpha = 1
 n_beta = 1
 
@@ -44,6 +46,7 @@ n_RAS_spaces_occ=0
 n_RAS_spaces_virt=0
 
 !----------------------------DO NOT TOUCH-------------------------------------
+call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
 allocate(RAS_space_occ(n_RAS_spaces_occ),RAS_space_virt(n_RAS_spaces_virt))
 allocate(excit_array(n_RAS_spaces_occ+n_RAS_spaces_virt))
 !-----------------------  YOU CAN TOUCH NOW-------------------------------------------
@@ -103,40 +106,86 @@ do i=1,n_orb
         p = p + 1
     end do
 end do
-
+interaction_alpha(:,:,:,:) = 0
 interaction_beta = interaction_alpha
 interaction_mix = interaction_alpha
-
+nuclear_energy = 0 
+hopping_alpha(1,1)=5
+hopping_alpha(2,2)=10
+hopping_alpha(1,2)=-1
+hopping_alpha(2,1)=-1
+hopping_beta = hopping_alpha
 
 call generate_params(gs_params,relativistic,n_orb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
-!diagonal = gs_params%diag
 gs_params%nuclear_energy = nuclear_energy
 N = gs_params%size_tot(1,2) + gs_params%size_tot(2,2) + gs_params%size_tot(3,2)
 allocate(eigenenergies(n_pairs))
 allocate(eigenstates(n_pairs,N))
 allocate(ground_state(N))
-call eigensystem(gs_params,n_pairs,eigenenergies,eigenstates)
+call eigensystem(gs_params,n_pairs,eigenenergies,eigenstates,ierr)
+ground_state = eigenstates(1,:)
+gs_energy = eigenenergies(1)
+
+deallocate(eigenenergies)
+
+deallocate(eigenstates)
+
+call generate_params(params2,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
 
 
+params2%nuclear_energy = nuclear_energy
+N = params2%size_tot(1,2) + params2%size_tot(2,2) + params2%size_tot(3,2)
+allocate(eigenenergies(2))
+allocate(eigenstates(2,N))
+call eigensystem(params2,2,eigenenergies,eigenstates,ierr)
+allocate(gf1(n_orb,n_orb))
+allocate(gf2(n_orb,n_orb))
 !HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
 !BLOCK n_alpha+1
-krylov_size = 4
+krylov_size = 1000
+!call generate_params(gf_params,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix, hso_ab, hso_ba)
+gf1(:,:) = 0
+gf2(:,:) = 0
+allocate(new_state1(2))
+allocate(new_state2(2))
+omega = 1
 
 
-call generate_params(gf_params,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix, hso_ab, hso_ba)
-allocate(new_state(gf_params%size_tot(1,2)+gf_params%size_tot(2,2)+gf_params%size_tot(3,2)))
-!call create_electron(1,ground_state,new_state,gs_params,gf_params,1)
-
-
-
-
-
+do i=1,n_orb
+    call create_electron(i,ground_state,new_state1,gs_params,params2,1)
+    do j=1,n_orb   
+        call create_electron(j,ground_state,new_state2,gs_params,params2,1)
+        do k=1,2
+            r1 = 0
+            r2 = 0
+            do l=1,N
+                r1 = r1 + new_state1(l)*eigenstates(k,l)
+                r2 = r2 + conjg(eigenstates(k,l))*new_state2(l)
+            end do
+            gf2(i,j) = gf2(i,j) + r1*r2/(omega-eigenenergies(k)+gs_energy)
+        end do
+    end do
+end do
+write(*,*) gf2(1,1)
+write(*,*) gf2(2,2)
+write(*,*) gf2(1,2)
+write(*,*) gf2(2,1)
+do i=1,n_orb
+    do j=1,n_orb
+        call calc_gf_matrix_element(ground_state,gs_energy,gs_params,params2,params2,omega,i,j,1,1,1,krylov_size,gf1(i,j))
+    end do
+end do
+write(*,*) "*********"
+write(*,*) gf1(1,1)
+write(*,*) gf1(2,2)
+write(*,*) gf1(1,2)
+write(*,*) gf1(2,1)
 write(*,*) "KONIEC"
 call cpu_time(end_time)
 total_time = end_time - start_time
-write(*,*) "Execution time: ", total_time, gs_params%size_tot(1,2),gs_params%size_tot(2,2),gs_params%size_tot(3,2),gs_params%size_tot(1,2)+gs_params%size_tot(2,2)+gs_params%size_tot(3,2)
+write(*,*) "Execution time: ", total_time
 call flush(6)
 
 
-
+call SlepcFinalize(ierr)
 end program main

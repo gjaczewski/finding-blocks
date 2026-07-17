@@ -327,13 +327,13 @@ n_distributions_alpha_m1 = 0
 n_distributions_beta_m1 = 0
 call count_distributions(n_alpha, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha)
 call count_distributions(n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta)
-if (relativistic .eqv. .true.) then
+
   call count_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1)
   call count_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1)
 
   call count_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1)
   call count_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1)
-end if 
+
 
 NRD_spin_alpha = n_distributions_alpha + n_distributions_alpha_m1 + n_distributions_alpha_p1
 NRD_spin_beta= n_distributions_beta + n_distributions_beta_m1 + n_distributions_beta_p1
@@ -374,12 +374,12 @@ NRDb(3,2) = n_distributions_beta + n_distributions_beta_p1 + n_distributions_bet
 call find_distributions(n_alpha, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha,RAS_el_array_alpha(1:n_distributions_alpha,:))
 call find_distributions(n_beta, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta,RAS_el_array_beta(1:n_distributions_beta,:))
 
-if (relativistic .eqv. .true.) then
+
 call find_distributions(n_alpha+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_p1,RAS_el_array_alpha(n_distributions_alpha+1:n_distributions_alpha+n_distributions_alpha_p1,:))
 call find_distributions(n_beta+1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_p1,RAS_el_array_beta(n_distributions_beta+1:n_distributions_beta+n_distributions_beta_p1,:))
 call find_distributions(n_alpha-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_alpha_m1,RAS_el_array_alpha(n_distributions_alpha+n_distributions_alpha_p1+1:n_distributions_alpha_m1+n_distributions_alpha+n_distributions_alpha_p1,:))
 call find_distributions(n_beta-1, n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,active_space,excit_array,n_combinations,n_spaces,all_combinations,n_distributions_beta_m1,RAS_el_array_beta(n_distributions_beta+n_distributions_beta_p1+1:n_distributions_beta_m1+n_distributions_beta+n_distributions_beta_p1,:))
-end if
+
 
 end subroutine find_spin_distributions
 
@@ -399,7 +399,7 @@ subroutine calculate_space_size(relativistic,NRD_spin_alpha,NRD_spin_beta,RAS_el
   sizea(1,1)=1
 
   call calc_size_block(NRDa(1,1),NRDa(1,2),NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizea(1,2))
-  
+
   sizeb(1,1)=1 
   call calc_size_block(NRDb(1,1),NRDb(1,2),NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizeb(1,2))
 
@@ -420,9 +420,9 @@ subroutine calculate_space_size(relativistic,NRD_spin_alpha,NRD_spin_beta,RAS_el
 
 
   ! n_alpha-1 n_beta+1 block
+
   sizea(3,1)=1 
   call calc_size_block(NRDa(3,1),NRDa(3,2),NRD_spin_alpha,RAS_el_array_alpha,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizea(3,2))
-
   sizeb(2,1)=1 
   call calc_size_block(NRDb(2,1),NRDb(2,2),NRD_spin_beta,RAS_el_array_beta,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,sizeb(2,2))
   
@@ -449,8 +449,8 @@ subroutine calc_size_block(range1,range2,NRD_spin,RAS_el_array_spin,n_RAS_spaces
   integer:: siz
   !real(8) :: nCr_dp
   real(8) :: c
-  !write(*,*)"range1,range2",range1,range2
   vec_length=0
+ 
   do i=range1,range2
      a=n_RAS_spaces_occ+1 
      siz=1
@@ -463,11 +463,11 @@ subroutine calc_size_block(range1,range2,NRD_spin,RAS_el_array_spin,n_RAS_spaces
         siz=siz*int(c)
      end do
      call bin_coeff(active_space,RAS_el_array_spin(i,a),c)
+
      siz=siz*int(c)
      vec_length=vec_length+siz
   end do
-  !write(*,*)"vec_length",vec_length
-  call flush(6)
+
 end subroutine calc_size_block
 
 subroutine bin_coeff(n,r,c)
@@ -1237,7 +1237,6 @@ subroutine generate_params(dane,relativistic,n_orb,n_alpha,n_beta,n_RAS_spaces_o
 
    !dane%size_tot(:,1) - the beginning of such sector
    !dane%size_tot(:,2) - the size (number of elements) of/in such sector
-
    !Here we check if any crucial blocks are empty
 
    if (dane%size_tot(1,2) .eq. 0) then
@@ -1295,7 +1294,7 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
 
 
 !here we generate strings
-    
+
     if (n_alpha .gt. 1)  then
         allocate(dane%str_a_m1(sizea(3,2),n_alpha-1))
         if (sizea(3,2) .ne. 0) then
@@ -1331,17 +1330,15 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
     end if
 
 !here we generate annihilation, creation-annihilation and single spin hamiltonians
-      
     allocate(dane%alpha_annihilation_matrix(n_orb,sizea(1,2),2))
     allocate(dane%alpha_annihilation_creation_matrix_m1(n_orb,n_orb,sizea(3,2),2))
     allocate(dane%alpha_hamiltonian_m1(sizea(3,2),sizea(3,2)))
-
     if (sizea(3,2) .ne. 0) then      
         call fill_annihilation_results(sizea(3,2),sizea(1,2),n_alpha,dane%str_a_m1,dane%str_a,n_orb,dane%alpha_annihilation_matrix)
         call fill_annihilation_creation_matrix(n_alpha-1,sizea(3,2),dane%str_a_m1,n_orb,dane%alpha_annihilation_creation_matrix_m1)
         call fill_nr_single_spin_hamiltonian(dane%str_a_m1,sizea(3,2),n_alpha-1,n_orb,hopping_alpha,interaction_alpha,dane%alpha_annihilation_creation_matrix_m1,dane%alpha_hamiltonian_m1)
     end if
-    
+  
     allocate(dane%beta_annihilation_matrix(n_orb,sizeb(1,2),2))
     allocate(dane%beta_annihilation_creation_matrix_m1(n_orb,n_orb,sizeb(3,2),2))
     allocate(dane%beta_hamiltonian_m1(sizeb(3,2),sizeb(3,2)))
@@ -1374,7 +1371,6 @@ call generate_diagonal_elements(dane%alpha_hamiltonian,dane%str_a,sizea(1,2),n_a
         call fill_annihilation_creation_matrix(n_beta+1,sizeb(2,2),dane%str_b_p1,n_orb,dane%beta_annihilation_creation_matrix_p1)
         call fill_nr_single_spin_hamiltonian(dane%str_b_p1,sizeb(2,2),n_beta+1,n_orb,hopping_beta,interaction_beta,dane%beta_annihilation_creation_matrix_p1,dane%beta_hamiltonian_p1)
     end if
-
 ! here we generate hamiltonian diagonal elements
     if (dane%size_tot(2,2) .ne. 0) then
         call generate_diagonal_elements(dane%alpha_hamiltonian_p1,dane%str_a_p1,sizea(2,2),n_alpha+1,dane%beta_hamiltonian_m1,dane%str_b_m1,sizeb(3,2),n_beta-1,dane%interaction_mix,n_orb,dane%diag(dane%size_tot(2,1):dane%size_tot(2,2)+dane%size_tot(1,2)))
@@ -1724,14 +1720,19 @@ do i=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
 end do
 
 do i=3,krylov_size
+
    new_state3 = temp_state - a(i-1)*new_state2 - b(i-1)*new_state1
    b(i) = 0
    do j=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
-      b(i) = b(i) + abs(new_state3(i))**2
+      b(i) = b(i) + abs(new_state3(j))**2
    end do
    b(i) = sqrt(b(i))
+
+
    new_state3 = new_state3/b(i)
+
    call matrix_vector_product(new_dane, new_state3, temp_state)
+
    a(i) = 0
    do j=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
       a(i) = a(i) + conjg(new_state3(j))*temp_state(j)
@@ -1739,6 +1740,7 @@ do i=3,krylov_size
    new_state1 = new_state2
    new_state2 = new_state3
 end do
+
 a = sign*a
 fraction = 0
 do i=krylov_size,1,-1
@@ -1761,6 +1763,7 @@ complex(8) :: new_state1_2(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_d
 complex(8) :: new_state1_3(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_3(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
 complex(8) :: temp_state1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)),temp_state2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2)), a(krylov_size), b(krylov_size)
 integer :: i,j
+
 if (e_or_h .eq. 1) then
  z = omega + gs_energy
  call create_electron(orbital1,ground_state,new_state1_1,dane,new_dane1,spin1)
@@ -1774,10 +1777,10 @@ write(*,*) "ERROR: e_or_h must be equal 1 (creation) or -1 (annihilation)"
 stop
 end if
 
-if (spin1 .eq. spin2) then
+if (((spin1 .eq. spin2) .and. (orbital1 .ne. orbital2))) then
    temp_state1 = new_state1_1 + new_state2_1
    call calc_fraction_diag(temp_state1,new_dane1,new_dane1,z,orbital1,spin1,2137,krylov_size,fraction_plus,e_or_h)
-else
+else if (spin1 .ne. spin2) then
    !remember that alpha state must correspond to new_state1
    call diff_spin_product(new_state1_1,new_dane1,new_state2_1,new_dane2,b(1))
    b(1) = sqrt(b(1))
@@ -1850,15 +1853,19 @@ else
       fraction_plus = b(i)**2/(z - a(i) - fraction_plus)
    end do
 end if
-
 call calc_fraction_diag(ground_state,dane,new_dane1,z,orbital1,spin1,e_or_h,krylov_size,fraction1,e_or_h) 
 call calc_fraction_diag(ground_state,dane,new_dane2,z,orbital2,spin2,e_or_h,krylov_size,fraction2,e_or_h)
+if (((orbital1 .ne. orbital2) .or. (spin1 .ne. spin2))) then
+   gf_matrix_element = 0.5*(fraction_plus - fraction1 - fraction2)
+else
+   gf_matrix_element = fraction1
+end if
 
-gf_matrix_element = 0.5*(fraction_plus - fraction1 - fraction2)
+
 end subroutine calc_gf_matrix_element
 
 
-subroutine eigensystem(params,n_pairs,eigenenergies,eigenstates)
+subroutine eigensystem(params,n_pairs,eigenenergies,eigenstates,ierr)
 type(parameters),target, intent(in) :: params
 integer, intent(in) :: n_pairs
 real(8), intent(inout) :: eigenenergies(n_pairs)
@@ -1867,12 +1874,12 @@ integer :: N
 PetscScalar          :: real_part, imaginary_part
 Vec                  :: vector_petsc, im_vector_petsc
 PetscScalar, pointer :: tablica_wynikowa(:)
-PetscErrorCode :: ierr
+PetscErrorCode, intent(inout) :: ierr
 Mat            :: A
 EPS            :: eps
 integer              :: nconv
 complex(8),target :: diagonal(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2))
-call SlepcInitialize(PETSC_NULL_CHARACTER, ierr)
+
 diagonal = params%diag
 ptr_dane => params
 ptr_przekatna => diagonal
@@ -1931,7 +1938,7 @@ call VecDestroy(im_vector_petsc, ierr)
 call EPSDestroy(eps, ierr)
 call MatDestroy(A, ierr)
 
-call SlepcFinalize(ierr)
+
 
 nullify(ptr_dane)
 nullify(ptr_przekatna)
