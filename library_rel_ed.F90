@@ -1666,204 +1666,24 @@ end do
 end if
 end subroutine diff_spin_product
 
-subroutine calc_fraction_diag(ground_state,dane,new_dane,z,orbital,spin,e_or_h,krylov_size,fraction,sign)
-type(parameters), intent(inout) :: dane, new_dane
-complex(8), intent(in) :: ground_state(dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2))
-complex(8), intent(in) :: z
-integer, intent(in) :: orbital, krylov_size
-integer, intent(in) :: spin, e_or_h, sign
-complex(8), intent(out) :: fraction
-complex(8) :: new_state1(new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)),new_state2(new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)),new_state3(new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)),temp_state(new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)) ,a(krylov_size), b(krylov_size)
-integer :: i,j
-
-if (e_or_h .eq. 1) then
- call create_electron(orbital,ground_state,new_state1,dane,new_dane,spin)
-else if (e_or_h .eq. -1) then
- call create_hole(orbital,ground_state,new_state1,dane,new_dane,spin)
-else if (e_or_h .eq. 2137) then
- new_state1 = ground_state
-else
-write(*,*) "ERROR: e_or_h must be equal 1 (creation) or -1 (annihilation)"
-stop
-end if
-
-b(1) = 0
-do i=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
-   b(1) = b(1) + abs(new_state1(i))**2
-end do
-b(1) = sqrt(b(1))
-
-
-new_state1 = new_state1/b(1)
-
-
-call matrix_vector_product(new_dane, new_state1, temp_state)
-
-a(1) = 0
-do i=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
-   a(1) = a(1) + conjg(new_state1(i))*temp_state(i)
-end do
-
-new_state2 = temp_state - a(1)*new_state1
-
-b(2) = 0
-do i=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
-   b(2) = b(2) + abs(new_state2(i))**2
-end do
-b(2) = sqrt(b(2))
-
-new_state2 = new_state2/b(2)
-call matrix_vector_product(new_dane, new_state2, temp_state)
-a(2) = 0
-do i=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
-   a(2) = a(2) + conjg(new_state2(i))*temp_state(i)
-end do
-
-do i=3,krylov_size
-
-   new_state3 = temp_state - a(i-1)*new_state2 - b(i-1)*new_state1
-   b(i) = 0
-   do j=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
-      b(i) = b(i) + abs(new_state3(j))**2
-   end do
-   b(i) = sqrt(b(i))
-
-
-   new_state3 = new_state3/b(i)
-
-   call matrix_vector_product(new_dane, new_state3, temp_state)
-
-   a(i) = 0
-   do j=1,new_dane%size_tot(1,2)+new_dane%size_tot(2,2)+new_dane%size_tot(3,2)
-      a(i) = a(i) + conjg(new_state3(j))*temp_state(j)
-   end do
-   new_state1 = new_state2
-   new_state2 = new_state3
-end do
-
-a = sign*a
-fraction = 0
-do i=krylov_size,1,-1
-   fraction = b(i)**2/(z - a(i) - fraction)
-end do
-end subroutine calc_fraction_diag
-
-
-subroutine calc_gf_matrix_element(ground_state,gs_energy,dane,new_dane1,new_dane2,omega,orbital1,orbital2,spin1,spin2,e_or_h,krylov_size,gf_matrix_element)
-type(parameters), intent(inout) :: dane, new_dane1, new_dane2
-complex(8), intent(in) :: ground_state(dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2))
-complex(8), intent(in) :: omega
-integer, intent(in) :: orbital1, orbital2, krylov_size
-integer, intent(in) :: spin1, spin2, e_or_h
-real(8), intent(in) :: gs_energy
-complex(8), intent(out) :: gf_matrix_element
-complex(8) :: fraction_plus, fraction1, fraction2, z
-complex(8) :: new_state1_1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_1(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
-complex(8) :: new_state1_2(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
-complex(8) :: new_state1_3(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)), new_state2_3(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2))
-complex(8) :: temp_state1(new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)),temp_state2(new_dane2%size_tot(1,2)+new_dane2%size_tot(2,2)+new_dane2%size_tot(3,2)), a(krylov_size), b(krylov_size)
-integer :: i,j
-
-if (e_or_h .eq. 1) then
- z = omega + gs_energy
- call create_electron(orbital1,ground_state,new_state1_1,dane,new_dane1,spin1)
- call create_electron(orbital2,ground_state,new_state2_1,dane,new_dane2,spin2)
-else if (e_or_h .eq. -1) then
- z = omega - gs_energy
- call create_hole(orbital1,ground_state,new_state1_1,dane,new_dane1,spin1)
- call create_hole(orbital2,ground_state,new_state2_2,dane,new_dane2,spin2)
-else
-write(*,*) "ERROR: e_or_h must be equal 1 (creation) or -1 (annihilation)"
-stop
-end if
-
-if (((spin1 .eq. spin2) .and. (orbital1 .ne. orbital2))) then
-   temp_state1 = new_state1_1 + new_state2_1
-   call calc_fraction_diag(temp_state1,new_dane1,new_dane1,z,orbital1,spin1,2137,krylov_size,fraction_plus,e_or_h)
-else if (spin1 .ne. spin2) then
-   !remember that alpha state must correspond to new_state1
-   call diff_spin_product(new_state1_1,new_dane1,new_state2_1,new_dane2,b(1))
-   b(1) = sqrt(b(1))
-   new_state1_1 = new_state1_1/b(1)
-   new_state2_1 = new_state2_1/b(1)
-
-   call matrix_vector_product(new_dane1, new_state1_1, temp_state1)
-   call matrix_vector_product(new_dane2, new_state2_1, temp_state2)
-   
-   call diff_spin_product(new_state1_1,new_dane1,temp_state2,new_dane2,a(1))
-   a(1) = 2*real(a(1))
-   do i=1,new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)
-      a(1) = a(1) + conjg(new_state1_1(i))*temp_state1(i)
-   end do
-   
-   do i=1,new_dane2%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)
-      a(1) = a(1) + conjg(new_state2_1(i))*temp_state2(i)
-   end do
-
-   new_state1_2 = temp_state1 - a(1)*new_state1_1
-   new_state2_2 = temp_state2 - a(1)*new_state2_1
-
-   call diff_spin_product(new_state1_2,new_dane1,new_state2_2,new_dane2,b(2))
-   b(2) = sqrt(b(2))
-   new_state1_2 = new_state1_2/b(2)
-   new_state2_2 = new_state2_2/b(2)
-
-   call matrix_vector_product(new_dane1, new_state1_2, temp_state1)
-   call matrix_vector_product(new_dane2, new_state2_2, temp_state2)
-
-   call diff_spin_product(new_state1_2,new_dane1,temp_state2,new_dane2,a(2))
-   a(2) = 2*real(a(2))
-   
-   do i=1,new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)
-      a(2) = a(2) + conjg(new_state1_2(i))*temp_state1(i)
-   end do
-   
-   do i=1,new_dane2%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)
-      a(2) = a(2) + conjg(new_state2_2(i))*temp_state2(i)
-   end do
-
-   do i=3,krylov_size
-      new_state1_3 = temp_state1 - a(i-1)*new_state1_2 - b(i-1)*new_state1_1
-      new_state2_3 = temp_state2 - a(i-1)*new_state2_2 - b(i-1)*new_state2_1
-      call diff_spin_product(new_state1_3,new_dane1,new_state2_3,new_dane2,b(i))
-      b(i) = sqrt(b(i))
-      new_state1_3 = new_state1_3/b(i)
-      new_state2_3 = new_state2_3/b(i)
-      call matrix_vector_product(new_dane1, new_state1_3, temp_state1)
-      call matrix_vector_product(new_dane2, new_state2_3, temp_state2)
-      call diff_spin_product(new_state1_3,new_dane1,temp_state2,new_dane2,a(i))
-      a(i) = 2*real(a(i))
-      
-      do j=1,new_dane1%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)
-         a(i) = a(i) + conjg(new_state1_3(j))*temp_state1(i)
-      end do
-
-      do j=1,new_dane2%size_tot(1,2)+new_dane1%size_tot(2,2)+new_dane1%size_tot(3,2)
-         a(i) = a(i) + conjg(new_state2_3(j))*temp_state2(i)
-      end do
-
-      new_state1_1 = new_state1_2
-      new_state2_1 = new_state2_2
-      new_state1_2 = new_state1_3
-      new_state2_2 = new_state2_3
-   end do
-   a = e_or_h*a
-   fraction_plus = 0
-   do i=krylov_size,1,-1
-      fraction_plus = b(i)**2/(z - a(i) - fraction_plus)
-   end do
-end if
-call calc_fraction_diag(ground_state,dane,new_dane1,z,orbital1,spin1,e_or_h,krylov_size,fraction1,e_or_h) 
-call calc_fraction_diag(ground_state,dane,new_dane2,z,orbital2,spin2,e_or_h,krylov_size,fraction2,e_or_h)
-if (((orbital1 .ne. orbital2) .or. (spin1 .ne. spin2))) then
-   gf_matrix_element = 0.5*(fraction_plus - fraction1 - fraction2)
-else
-   gf_matrix_element = fraction1
-end if
-
-
-end subroutine calc_gf_matrix_element
+!FRACTION + GF
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 subroutine eigensystem(params,n_pairs,eigenenergies,eigenstates,ierr)
 type(parameters),target, intent(in) :: params
