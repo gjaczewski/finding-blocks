@@ -32,7 +32,6 @@ complex(8) :: omega
 real :: start_time, end_time
 real :: total_time
 complex(8) :: r1,r2
-complex(8) :: maly_stan(2)
 call cpu_time(start_time)
 
 
@@ -110,9 +109,11 @@ end do
 interaction_alpha(:,:,:,:) = 0
 interaction_beta = interaction_alpha
 interaction_mix = interaction_alpha
+interaction_mix(1,1,1,1) = 4
+interaction_mix(2,2,2,2) = 4
 nuclear_energy = 0 
 hopping_alpha(1,1)=5
-hopping_alpha(2,2)=10
+hopping_alpha(2,2)=5
 hopping_alpha(1,2)=-1
 hopping_alpha(2,1)=-1
 hopping_beta = hopping_alpha
@@ -143,13 +144,13 @@ allocate(gf1(n_orb,n_orb))
 allocate(gf2(n_orb,n_orb))
 !HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
 !BLOCK n_alpha+1
-krylov_size = 5
+krylov_size = 1000
 !call generate_params(gf_params,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix, hso_ab, hso_ba)
 gf1(:,:) = 0
 gf2(:,:) = 0
 allocate(new_states(2,2))
 
-omega = 0
+omega = 1
 !call create_electron(1,[(0.0d0,0.0d0),(0.0d0,0.0d0),(0.0d0,0.0d0),(1.0d0,0.0d0)],new_state1,gs_params,params2,1)
 do i=1,n_orb
     call create_electron(i,ground_state,new_states(i,:),gs_params,params2,1)
@@ -175,19 +176,18 @@ write(*,*) gf2(1,1)
 write(*,*) gf2(2,2)
 write(*,*) gf2(1,2)
 write(*,*) gf2(2,1)
+write(*,*) "*********"
 
 do i=1,n_orb
     do j=1,n_orb
-        call calc_gf_matrix_element(ground_state,gs_energy,gs_params,params2,params2,omega,i,j,1,1,1,krylov_size,gf1(i,j))
+        call calc_e_gf(i,j,1,1,params2,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf1(i,j))
     end do
 end do
 
-write(*,*) "*********"
 write(*,*) gf1(1,1)
 write(*,*) gf1(2,2)
 write(*,*) gf1(1,2)
 write(*,*) gf1(2,1)
-stop
 write(*,*) "KONIEC"
 call cpu_time(end_time)
 total_time = end_time - start_time

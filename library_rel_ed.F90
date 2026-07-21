@@ -1668,6 +1668,147 @@ end subroutine diff_spin_product
 
 !FRACTION + GF
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine continued_fraction(params,state,z,krylov_size,sign,fraction)
+type(parameters), intent(inout) :: params
+complex(8), intent(in) :: state(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2))
+complex(8), intent(in) :: z
+integer, intent(in) :: krylov_size, sign
+complex(8), intent(out) :: fraction
+complex(8) :: a(krylov_size), b(krylov_size)
+complex(8) :: state_1(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)),state_2(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)),state_3(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2))
+complex(8) :: temp_state(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2))
+integer :: i
+
+state_1 = state
+b(1) = 0
+do i=1,params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)
+   b(1) = b(1) + abs(state_1(i))**2
+end do
+b(1) = sqrt(b(1))
+
+
+state_1 = state_1/b(1)
+
+
+call matrix_vector_product(params, state_1, temp_state)
+
+a(1) = 0
+do i=1,params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)
+   a(1) = a(1) + conjg(state_1(i))*temp_state(i)
+end do
+
+state_2 = temp_state - a(1)*state_1
+
+b(2) = 0
+do i=1,params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)
+   b(2) = b(2) + abs(state_2(i))**2
+end do
+b(2) = sqrt(b(2))
+
+state_2 = state_2/b(2)
+call matrix_vector_product(params, state_2, temp_state)
+a(2) = 0
+do i=1,params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)
+   a(2) = a(2) + conjg(state_2(i))*temp_state(i)
+end do
+do i=3,krylov_size
+   state_3 = temp_state - a(i-1)*state_2 - b(i-1)*state_1
+   b(i) = 0
+   do j=1,params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)
+      b(i) = b(i) + abs(state_3(j))**2
+   end do
+   b(i) = sqrt(b(i))
+
+
+   state_3 = state_3/b(i)
+
+   call matrix_vector_product(params, state_3, temp_state)
+
+   a(i) = 0
+   do j=1,params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2)
+      a(i) = a(i) + conjg(state_3(j))*temp_state(j)
+   end do
+   state_1 = state_2
+   state_2 = state_3
+end do
+
+a = sign*a
+fraction = 0
+do i=krylov_size,1,-1
+   fraction = b(i)**2/(z - a(i) - fraction)
+end do
+end subroutine continued_fraction
+
+subroutine calc_e_gf(orbital1,orbital2,spin1,spin2,params1,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf)
+type(parameters), intent(inout) :: params1, params2, gs_params
+integer, intent(in) :: orbital1,orbital2,spin1,spin2, krylov_size
+complex(8), intent(in) :: ground_state(gs_params%size_tot(1,2)+gs_params%size_tot(2,2)+gs_params%size_tot(3,2))
+real(8), intent(in) :: gs_energy
+complex(8), intent(in) :: omega
+complex(8), intent(out) :: gf
+complex(8) :: fraction_plus, fraction1, fraction2, fraction_i
+complex(8) :: state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
+complex(8) :: temp_state(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
+if (spin1 .eq. spin2) then
+      call create_electron(orbital1,ground_state,state_1,gs_params,params1,spin1)
+      call create_electron(orbital2,ground_state,state_2,gs_params,params2,spin2)
+      if (orbital1 .eq. orbital2) then
+         call continued_fraction(params1,state_1,omega+gs_energy,krylov_size,1,gf)
+      else
+
+         call continued_fraction(params1,state_1,omega+gs_energy,krylov_size,1,fraction1)
+
+         call continued_fraction(params2,state_2,omega+gs_energy,krylov_size,1,fraction2)
+
+         call continued_fraction(params1,state_1+state_2,omega+gs_energy,krylov_size,1,fraction_plus)
+
+         call continued_fraction(params1,(0.0d0,-1.0d0)*state_1+state_2,omega+gs_energy,krylov_size,1,fraction_i)
+
+         gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
+
+      end if
+else
+   write(*,*) "DIFFERENT SPIN WILL BE ADDED SOON"
+   stop
+end if
+end subroutine calc_e_gf
+
+
+
+subroutine calc_h_gf(orbital1,orbital2,spin1,spin2,params1,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf)
+type(parameters), intent(inout) :: params1, params2, gs_params
+integer, intent(in) :: orbital1,orbital2,spin1,spin2, krylov_size
+complex(8), intent(in) :: ground_state(gs_params%size_tot(1,2)+gs_params%size_tot(2,2)+gs_params%size_tot(3,2))
+real(8), intent(in) :: gs_energy
+complex(8), intent(in) :: omega
+complex(8), intent(out) :: gf
+complex(8) :: fraction_plus, fraction1, fraction2, fraction_i
+complex(8) :: state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
+complex(8) :: temp_state(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
+!INDEX CONVENTION NEEDS TO BE ESTABLISHED
+if (spin1 .eq. spin2) then
+      call create_hole(orbital1,ground_state,state_1,gs_params,params1,spin1)
+      call create_hole(orbital2,ground_state,state_2,gs_params,params2,spin2)
+      if (orbital1 .eq. orbital2) then
+         call continued_fraction(params1,state_1,omega-gs_energy,krylov_size,-1,gf)
+      else
+
+         call continued_fraction(params1,state_1,omega-gs_energy,krylov_size,-1,fraction1)
+
+         call continued_fraction(params2,state_2,omega-gs_energy,krylov_size,-1,fraction2)
+
+         call continued_fraction(params1,state_1+state_2,omega-gs_energy,krylov_size,-1,fraction_plus)
+
+         call continued_fraction(params1,(0.0d0,1.0d0)*state_1+state_2,omega-gs_energy,krylov_size,-1,fraction_i)
+
+         gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
+
+      end if
+else
+   write(*,*) "DIFFERENT SPIN WILL BE ADDED SOON"
+   stop
+end if
+end subroutine calc_h_gf
 
 
 
@@ -1677,14 +1818,7 @@ end subroutine diff_spin_product
 
 
 
-
-
-
-
-
-
-
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine eigensystem(params,n_pairs,eigenenergies,eigenstates,ierr)
 type(parameters),target, intent(in) :: params
 integer, intent(in) :: n_pairs
