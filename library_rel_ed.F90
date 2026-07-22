@@ -1648,30 +1648,29 @@ integer, intent(in) :: sign
 complex(8), intent(out) :: scalar_product
 integer :: i
 scalar_product = 0
-!DO ZROBIENIA !!!!!!
+!ALPHA ALWAYS ON THE LEFT
 if ((new_dane_alpha%relativistic .eqv. .true.) .and. (new_dane_beta%relativistic .eqv. .true.)) then
 if (sign .eq. 1) then
 do i=1,new_dane_alpha%size_tot(1,2)
-   scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i))*new_state_beta(i+new_dane_beta%size_tot(1,2)))
+   scalar_product = scalar_product + conjg(new_state_alpha(i))*new_state_beta(i+new_dane_beta%size_tot(1,2))
 end do
 
 do i=1,new_dane_alpha%size_tot(3,2)
-   scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2)))*new_state_beta(i))
+   scalar_product = scalar_product + conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2)))*new_state_beta(i)
 end do
 else if (sign .eq. -1) then
 do i=1,new_dane_alpha%size_tot(1,2)
-   scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i))*new_state_beta(i+new_dane_beta%size_tot(1,2)+new_dane_beta%size_tot(2,2)))
+   scalar_product = scalar_product + conjg(new_state_alpha(i))*new_state_beta(i+new_dane_beta%size_tot(1,2)+new_dane_beta%size_tot(2,2))
 end do
 
 do i=1,new_dane_alpha%size_tot(2,2)
-   scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)))*new_state_beta(i))
+   scalar_product = scalar_product + conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)))*new_state_beta(i)
 end do
 end if
 end if
 end subroutine diff_spin_product
 
-!FRACTION + GF
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 subroutine continued_fraction(params,state,z,krylov_size,sign,fraction)
 type(parameters), intent(inout) :: params
 complex(8), intent(in) :: state(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2))
@@ -1754,17 +1753,109 @@ complex(8) :: state_2_1(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size
 complex(8) :: temp_state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
 complex(8) :: temp_state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
 complex(8) :: a(krylov_size), b(krylov_size)
+complex(8) :: temp
 integer :: i
 
 state_1_1 = state_1
 state_2_1 = state_2
 call diff_spin_product(state_1_1,params1,state_2_1,params2,b(1),sign)
+b(1) = b(1) + conjg(b(1))
+do i=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
+   b(1) = b(1) + conjg(state_1_1(i))*state_1_1(i)
+end do
+
+do i=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
+   b(1) = b(1) + conjg(state_2_1(i))*state_2_1(i)
+end do
 b(1) = sqrt(b(1))
 state_1_1 = state_1_1/b(1)
 state_2_1 = state_2_1/b(1)
 
 call matrix_vector_product(params1, state_1_1, temp_state_1)
 call matrix_vector_product(params2, state_2_1, temp_state_2)
+
+call diff_spin_product(state_1_1,params1,temp_state_2,params2,a(1),sign)
+a(1) = a(1) + conjg(a(1))
+do i=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
+   a(1) = a(1) + conjg(state_1_1(i))*temp_state_1(i)
+end do
+
+do i=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
+   a(1) = a(1) + conjg(state_2_1(i))*temp_state_2(i)
+end do
+
+
+state1_2 = temp_state_1 - a(1)*state1_1
+state2_2 = temp_state_2 - a(1)*state2_1
+
+call diff_spin_product(state_1_2,params1,state_2_2,params2,b(2),sign)
+b(2) = b(2) + conjg(b(2))
+do i=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
+   b(2) = b(2) + conjg(state_1_2(i))*state_1_2(i)
+end do
+
+do i=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
+   b(2) = b(2) + conjg(state_2_2(i))*state_2_2(i)
+end do
+b(2) = sqrt(b(2))
+state_1_2 = state_1_2/b(2)
+state_2_2 = state_2_2/b(2)
+
+call matrix_vector_product(params1, state_1_2, temp_state_1)
+call matrix_vector_product(params2, state_2_2, temp_state_2)
+
+call diff_spin_product(state_1_2,params1,temp_state_2,params2,a(2),sign)
+a(2) = a(2) + conjg(a(2))
+do i=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
+   a(2) = a(2) + conjg(state_1_2(i))*temp_state_1(i)
+end do
+
+do i=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
+   a(2) = a(2) + conjg(state_2_2(i))*temp_state_2(i)
+end do
+
+if (krylov_size .gt. 2) then
+   do i=3,krylov_size
+      state_1_3 = temp_state1 - a(i-1)*state_1_2 - b(i-1)*state1_1
+      state_2_3 = temp_state2 - a(i-1)*state_2_2 - b(i-1)*state2_1
+      call diff_spin_product(state_1_3,params1,state_2_3,params2,b(i),sign)
+      b(i) = b(i) + conjg(b(i))
+      
+      do j=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
+         b(i) = b(i) + conjg(state_1_3(j))*state_1_3(j)
+      end do
+
+      do j=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
+         b(i) = b(i) + conjg(state_2_3(j))*state_2_3(j)
+      end do
+      b(i) = sqrt(b(i))
+      state_1_3 = state_1_3/b(i)
+      state_2_3 = state_2_3/b(i)
+
+      call matrix_vector_product(params1, state_1_3, temp_state_1)
+      call matrix_vector_product(params2, state_2_3, temp_state_2)
+
+      call diff_spin_product(state_1_3,params1,temp_state_2,params2,a(i),sign)
+      a(i) = a(i) + conjg(a(i))
+      do j=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
+         a(i) = a(i) + conjg(state_1_3(j))*temp_state_1(j)
+      end do
+
+      do i=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
+         a(i) = a(i) + conjg(state_2_3(j))*temp_state_2(j)
+      end do
+
+      state_1_1 = state_1_2
+      state_2_1 = state_2_2
+      state_1_2 = state_1_3
+      state_2_2 = state_2_3
+   end do
+end if
+a = a * sign
+fraction = 0
+do i=krylov_size,1,-1
+   fraction = b(i)**2/(z - a(i) - fraction)
+end do
 end subroutine mixed_continued_fraction
 
 subroutine calc_e_gf(orbital1,orbital2,spin1,spin2,params1,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf)
