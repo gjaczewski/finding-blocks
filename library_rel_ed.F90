@@ -1641,21 +1641,16 @@ end do
 end if
 end subroutine create_hole
 
-subroutine diff_spin_product(new_state_alpha,new_dane_alpha,new_state_beta,new_dane_beta,scalar_product)
+subroutine diff_spin_product(new_state_alpha,new_dane_alpha,new_state_beta,new_dane_beta,scalar_product,sign)
 type(parameters), intent(in) :: new_dane_alpha, new_dane_beta
 complex(8), intent(in) :: new_state_alpha(new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2)+new_dane_alpha%size_tot(3,2)),new_state_beta(new_dane_beta%size_tot(1,2)+new_dane_beta%size_tot(2,2)+new_dane_beta%size_tot(3,2))
+integer, intent(in) :: sign
 complex(8), intent(out) :: scalar_product
 integer :: i
 scalar_product = 0
-
-do i=1,new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2)+new_dane_alpha%size_tot(3,2)
-   scalar_product = scalar_product + abs(new_state_alpha(i))**2
-end do
-
-do i=1,new_dane_beta%size_tot(1,2)+new_dane_beta%size_tot(2,2)+new_dane_beta%size_tot(3,2)
-   scalar_product = scalar_product + abs(new_state_beta(i))**2
-end do
+!DO ZROBIENIA !!!!!!
 if ((new_dane_alpha%relativistic .eqv. .true.) .and. (new_dane_beta%relativistic .eqv. .true.)) then
+if (sign .eq. 1) then
 do i=1,new_dane_alpha%size_tot(1,2)
    scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i))*new_state_beta(i+new_dane_beta%size_tot(1,2)))
 end do
@@ -1663,6 +1658,15 @@ end do
 do i=1,new_dane_alpha%size_tot(3,2)
    scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2)))*new_state_beta(i))
 end do
+else if (sign .eq. -1) then
+do i=1,new_dane_alpha%size_tot(1,2)
+   scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i))*new_state_beta(i+new_dane_beta%size_tot(1,2)+new_dane_beta%size_tot(2,2)))
+end do
+
+do i=1,new_dane_alpha%size_tot(2,2)
+   scalar_product = scalar_product + 2*real(conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)))*new_state_beta(i))
+end do
+end if
 end if
 end subroutine diff_spin_product
 
@@ -1739,6 +1743,30 @@ do i=krylov_size,1,-1
 end do
 end subroutine continued_fraction
 
+subroutine mixed_continued_fraction(params1,state_1,params2,state_2,z,krylov_size,sign,fraction)
+type(parameters), intent(inout) :: params1, params2
+complex(8), intent(in):: state1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)), state2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
+complex(8), intent(in) :: z
+integer, intent(in) :: sign
+complex(8), intent(out) :: fraction
+complex(8) :: state_1_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_1_2(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_1_3(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
+complex(8) :: state_2_1(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)),state_2_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)),state_2_3(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
+complex(8) :: temp_state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
+complex(8) :: temp_state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
+complex(8) :: a(krylov_size), b(krylov_size)
+integer :: i
+
+state_1_1 = state_1
+state_2_1 = state_2
+call diff_spin_product(state_1_1,params1,state_2_1,params2,b(1),sign)
+b(1) = sqrt(b(1))
+state_1_1 = state_1_1/b(1)
+state_2_1 = state_2_1/b(1)
+
+call matrix_vector_product(params1, state_1_1, temp_state_1)
+call matrix_vector_product(params2, state_2_1, temp_state_2)
+end subroutine mixed_continued_fraction
+
 subroutine calc_e_gf(orbital1,orbital2,spin1,spin2,params1,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf)
 type(parameters), intent(inout) :: params1, params2, gs_params
 integer, intent(in) :: orbital1,orbital2,spin1,spin2, krylov_size
@@ -1748,28 +1776,24 @@ complex(8), intent(in) :: omega
 complex(8), intent(out) :: gf
 complex(8) :: fraction_plus, fraction1, fraction2, fraction_i
 complex(8) :: state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
-complex(8) :: temp_state(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
-if (spin1 .eq. spin2) then
-      call create_electron(orbital1,ground_state,state_1,gs_params,params1,spin1)
-      call create_electron(orbital2,ground_state,state_2,gs_params,params2,spin2)
-      if (orbital1 .eq. orbital2) then
-         call continued_fraction(params1,state_1,omega+gs_energy,krylov_size,1,gf)
-      else
 
-         call continued_fraction(params1,state_1,omega+gs_energy,krylov_size,1,fraction1)
+complex(8) :: temp_states_1(3,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)), temp_states_2(3,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
+call create_electron(orbital1,ground_state,state_1,gs_params,params1,spin1)
+call continued_fraction(params1,state_1,omega+gs_energy,krylov_size,1,fraction1)
 
-         call continued_fraction(params2,state_2,omega+gs_energy,krylov_size,1,fraction2)
 
-         call continued_fraction(params1,state_1+state_2,omega+gs_energy,krylov_size,1,fraction_plus)
-
-         call continued_fraction(params1,(0.0d0,-1.0d0)*state_1+state_2,omega+gs_energy,krylov_size,1,fraction_i)
-
-         gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
-
-      end if
+if ((orbital1 .eq. orbital2) .and. (spin1 .eq. spin2)) then
+   gf = fraction1
 else
-   write(*,*) "DIFFERENT SPIN WILL BE ADDED SOON"
-   stop
+   call create_electron(orbital2,ground_state,state_2,gs_params,params2,spin2)
+   call continued_fraction(params2,state_2,omega+gs_energy,krylov_size,1,fraction2)
+   if (spin1 .eq. spin2) then
+      call continued_fraction(params1,state_1+state_2,omega+gs_energy,krylov_size,1,fraction_plus)
+      call continued_fraction(params1,(0.0d0,-1.0d0)*state_1+state_2,omega+gs_energy,krylov_size,1,fraction_i)
+      gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
+   else
+      continue
+   end if
 end if
 end subroutine calc_e_gf
 
@@ -1784,29 +1808,22 @@ complex(8), intent(in) :: omega
 complex(8), intent(out) :: gf
 complex(8) :: fraction_plus, fraction1, fraction2, fraction_i
 complex(8) :: state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
-complex(8) :: temp_state(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
 !INDEX CONVENTION NEEDS TO BE ESTABLISHED
-if (spin1 .eq. spin2) then
-      call create_hole(orbital1,ground_state,state_1,gs_params,params1,spin1)
-      call create_hole(orbital2,ground_state,state_2,gs_params,params2,spin2)
-      if (orbital1 .eq. orbital2) then
-         call continued_fraction(params1,state_1,omega-gs_energy,krylov_size,-1,gf)
-      else
+call create_hole(orbital1,ground_state,state_1,gs_params,params1,spin1)
+call continued_fraction(params1,state_1,omega-gs_energy,krylov_size,-1,fraction1)
 
-         call continued_fraction(params1,state_1,omega-gs_energy,krylov_size,-1,fraction1)
-
-         call continued_fraction(params2,state_2,omega-gs_energy,krylov_size,-1,fraction2)
-
-         call continued_fraction(params1,state_1+state_2,omega-gs_energy,krylov_size,-1,fraction_plus)
-
-         call continued_fraction(params1,(0.0d0,1.0d0)*state_1+state_2,omega-gs_energy,krylov_size,-1,fraction_i)
-
-         gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
-
-      end if
+if ((orbital1 .eq. orbital2) .and. (spin1 .eq. spin2)) then
+   gf = fraction1
 else
-   write(*,*) "DIFFERENT SPIN WILL BE ADDED SOON"
-   stop
+   call create_hole(orbital2,ground_state,state_2,gs_params,params2,spin2)
+   call continued_fraction(params2,state_2,omega-gs_energy,krylov_size,-1,fraction2)
+   if (spin1 .eq. spin2) then
+      call continued_fraction(params1,state_1+state_2,omega-gs_energy,krylov_size,-1,fraction_plus)
+      call continued_fraction(params1,(0.0d0,1.0d0)*state_1+state_2,omega-gs_energy,krylov_size,-1,fraction_i)
+      gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
+   else
+      continue
+   end if
 end if
 end subroutine calc_h_gf
 
