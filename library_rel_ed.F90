@@ -1744,7 +1744,7 @@ end subroutine continued_fraction
 
 subroutine mixed_continued_fraction(params1,state_1,params2,state_2,z,krylov_size,sign,fraction)
 type(parameters), intent(inout) :: params1, params2
-complex(8), intent(in):: state1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)), state2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
+complex(8), intent(in):: state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)), state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
 complex(8), intent(in) :: z
 integer, intent(in) :: sign
 complex(8), intent(out) :: fraction
@@ -1753,7 +1753,6 @@ complex(8) :: state_2_1(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size
 complex(8) :: temp_state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
 complex(8) :: temp_state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
 complex(8) :: a(krylov_size), b(krylov_size)
-complex(8) :: temp
 integer :: i
 
 state_1_1 = state_1
@@ -1785,8 +1784,8 @@ do i=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
 end do
 
 
-state1_2 = temp_state_1 - a(1)*state1_1
-state2_2 = temp_state_2 - a(1)*state2_1
+state_1_2 = temp_state_1 - a(1)*state_1_1
+state_2_2 = temp_state_2 - a(1)*state_2_1
 
 call diff_spin_product(state_1_2,params1,state_2_2,params2,b(2),sign)
 b(2) = b(2) + conjg(b(2))
@@ -1816,8 +1815,8 @@ end do
 
 if (krylov_size .gt. 2) then
    do i=3,krylov_size
-      state_1_3 = temp_state1 - a(i-1)*state_1_2 - b(i-1)*state1_1
-      state_2_3 = temp_state2 - a(i-1)*state_2_2 - b(i-1)*state2_1
+      state_1_3 = temp_state_1 - a(i-1)*state_1_2 - b(i-1)*state_1_1
+      state_2_3 = temp_state_2 - a(i-1)*state_2_2 - b(i-1)*state_2_1
       call diff_spin_product(state_1_3,params1,state_2_3,params2,b(i),sign)
       b(i) = b(i) + conjg(b(i))
       
@@ -1841,7 +1840,7 @@ if (krylov_size .gt. 2) then
          a(i) = a(i) + conjg(state_1_3(j))*temp_state_1(j)
       end do
 
-      do i=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
+      do j=1,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)
          a(i) = a(i) + conjg(state_2_3(j))*temp_state_2(j)
       end do
 
@@ -1867,8 +1866,6 @@ complex(8), intent(in) :: omega
 complex(8), intent(out) :: gf
 complex(8) :: fraction_plus, fraction1, fraction2, fraction_i
 complex(8) :: state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
-
-complex(8) :: temp_states_1(3,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)), temp_states_2(3,params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
 call create_electron(orbital1,ground_state,state_1,gs_params,params1,spin1)
 call continued_fraction(params1,state_1,omega+gs_energy,krylov_size,1,fraction1)
 
@@ -1883,7 +1880,9 @@ else
       call continued_fraction(params1,(0.0d0,-1.0d0)*state_1+state_2,omega+gs_energy,krylov_size,1,fraction_i)
       gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
    else
-      continue
+      call mixed_continued_fraction(params1,state_1,params2,state_2,omega+gs_energy,krylov_size,1,fraction_plus)
+      call mixed_continued_fraction(params1,(0.0d0,-1.0d0)*state_1,params2,state_2,omega+gs_energy,krylov_size,1,fraction_i)
+      gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
    end if
 end if
 end subroutine calc_e_gf
@@ -1913,7 +1912,9 @@ else
       call continued_fraction(params1,(0.0d0,1.0d0)*state_1+state_2,omega-gs_energy,krylov_size,-1,fraction_i)
       gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
    else
-      continue
+      call mixed_continued_fraction(params1,state_1,params2,state_2,omega-gs_energy,krylov_size,-1,fraction_plus)
+      call mixed_continued_fraction(params1,(0.0d0,1.0d0)*state_1,params2,state_2,omega-gs_energy,krylov_size,-1,fraction_i)
+      gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
    end if
 end if
 end subroutine calc_h_gf
