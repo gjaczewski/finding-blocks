@@ -106,17 +106,17 @@ do i=1,n_orb
         p = p + 1
     end do
 end do
-interaction_alpha(:,:,:,:) = 0
+!interaction_alpha(:,:,:,:) = 0
 interaction_beta = interaction_alpha
 interaction_mix = interaction_alpha
-interaction_mix(1,1,1,1) = 4
-interaction_mix(2,2,2,2) = 4
+!interaction_mix(1,1,1,1) = 4
+!interaction_mix(2,2,2,2) = 4
 nuclear_energy = 0 
-hopping_alpha(1,1)=5
-hopping_alpha(2,2)=5
-hopping_alpha(1,2)=-1
-hopping_alpha(2,1)=-1
-hopping_beta = hopping_alpha
+!hopping_alpha(1,1)=-5
+!hopping_alpha(2,2)=-8
+!hopping_alpha(1,2)=0
+!hopping_alpha(2,1)=0
+!hopping_beta = hopping_alpha
 
 call generate_params(gs_params,relativistic,n_orb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
 gs_params%nuclear_energy = nuclear_energy
@@ -135,7 +135,7 @@ deallocate(eigenstates)
 
 
 
-call generate_params(params2,relativistic,n_orb,n_alpha,n_beta+1,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
+call generate_params(params2,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
 params2%nuclear_energy = nuclear_energy
 N = params2%size_tot(1,2) + params2%size_tot(2,2) + params2%size_tot(3,2)
 allocate(eigenenergies(2))
@@ -151,10 +151,10 @@ gf1(:,:) = 0
 gf2(:,:) = 0
 allocate(new_states(2,2))
 
-omega = (1.0d0,0.05d0)
+omega = (1.0d0,1.0d0)
 !call create_electron(1,[(0.0d0,0.0d0),(0.0d0,0.0d0),(0.0d0,0.0d0),(1.0d0,0.0d0)],new_state1,gs_params,params2,1)
 do i=1,n_orb
-    call create_electron(i,ground_state,new_states(i,:),gs_params,params2,-1)
+    call create_electron(i,ground_state,new_states(i,:),gs_params,params2,1)
 end do
 
 
@@ -181,7 +181,7 @@ write(*,*) "*********"
 
 do i=1,n_orb
     do j=1,n_orb
-        call calc_e_gf(i,j,-1,-1,params2,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf1(i,j))
+        call calc_e_gf(i,j,1,1,params2,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf1(i,j))
     end do
 end do
 
