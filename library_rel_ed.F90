@@ -1652,6 +1652,7 @@ scalar_product = 0
 
 !ALPHA ALWAYS ON THE LEFT
 if ((new_dane_alpha%relativistic .eqv. .true.) .and. (new_dane_beta%relativistic .eqv. .true.)) then
+if (left_spin .eq. 1) then
 if (sign .eq. 1) then
 do i=1,new_dane_alpha%size_tot(1,2)
    scalar_product = scalar_product + conjg(new_state_alpha(i))*new_state_beta(i+new_dane_beta%size_tot(1,2))
@@ -1669,9 +1670,9 @@ do i=1,new_dane_alpha%size_tot(2,2)
    scalar_product = scalar_product + conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)))*new_state_beta(i)
 end do
 end if
+else if (left_spin .eq. -1) then
+
 end if
-if (left_spin .eq. -1) then
-   scalar_product = conjg(scalar_product)
 end if
 end subroutine diff_spin_product
 
