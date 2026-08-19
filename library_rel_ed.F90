@@ -1466,7 +1466,7 @@ integer :: i,j,mu
          do j=1,new_dane%n_strings_beta
            if (new_dane%beta_annihilation_matrix(orbital,j,1) .ne. 0) then
             do i=1,new_dane%n_strings_alpha
-               new_temp_table1(i,j) = new_dane%beta_annihilation_matrix(orbital,j,2)*temp_table1(i,new_dane%beta_annihilation_matrix(orbital,j,1))*(-1)**new_dane%n_alpha
+               new_temp_table1(i,j) = new_dane%beta_annihilation_matrix(orbital,j,2)*temp_table1(i,new_dane%beta_annihilation_matrix(orbital,j,1))*((-1)**new_dane%n_alpha)
             end do
            end if
          end do
@@ -1476,7 +1476,7 @@ integer :: i,j,mu
          do j=1,new_dane%n_strings_beta_m1
            if (dane%beta_annihilation_matrix(orbital,j,1) .ne. 0) then
             do i=1,new_dane%n_strings_alpha_p1
-               new_temp_table2(i,j) = dane%beta_annihilation_matrix(orbital,j,2)*temp_table2(i,dane%beta_annihilation_matrix(orbital,j,1))*(-1)**(new_dane%n_alpha+1)
+               new_temp_table2(i,j) = dane%beta_annihilation_matrix(orbital,j,2)*temp_table2(i,dane%beta_annihilation_matrix(orbital,j,1))*((-1)**(new_dane%n_alpha+1))
             end do
            end if
          end do
@@ -1485,7 +1485,7 @@ integer :: i,j,mu
          do j=1,new_dane%n_strings_beta_p1
            if (new_dane%beta_annihilation_matrix_p1(orbital,j,1) .ne. 0) then
             do i=1,new_dane%n_strings_alpha_m1
-               new_temp_table3(i,j) = new_dane%beta_annihilation_matrix_p1(orbital,j,2)*temp_table3(i,new_dane%beta_annihilation_matrix_p1(orbital,j,1))*(-1)**(new_dane%n_alpha-1)
+               new_temp_table3(i,j) = new_dane%beta_annihilation_matrix_p1(orbital,j,2)*temp_table3(i,new_dane%beta_annihilation_matrix_p1(orbital,j,1))*((-1)**(new_dane%n_alpha-1))
             end do
            end if
          end do
@@ -1593,7 +1593,7 @@ end if
       do j=1,dane%n_strings_beta
          if (dane%beta_annihilation_matrix(orbital,j,1) .ne. 0) then
             do i=1,dane%n_strings_alpha
-               new_temp_table1(i,dane%beta_annihilation_matrix(orbital,j,1)) = dane%beta_annihilation_matrix(orbital,j,1)*temp_table1(i,j)*(-1)**dane%n_alpha
+               new_temp_table1(i,dane%beta_annihilation_matrix(orbital,j,1)) = dane%beta_annihilation_matrix(orbital,j,2)*temp_table1(i,j)*((-1)**dane%n_alpha)
             end do
          end if
       end do
@@ -1601,7 +1601,7 @@ if (dane%relativistic .eqv. .true.) then
       do j=1,dane%n_strings_beta_m1
          if (new_dane%beta_annihilation_matrix(orbital,j,1) .ne. 0) then
             do i=1,dane%n_strings_alpha_p1
-               new_temp_table2(i,new_dane%beta_annihilation_matrix(orbital,j,1)) = new_dane%beta_annihilation_matrix(orbital,j,1)*temp_table2(i,j)*(-1)**(dane%n_alpha+1)
+               new_temp_table2(i,new_dane%beta_annihilation_matrix(orbital,j,1)) = new_dane%beta_annihilation_matrix(orbital,j,2)*temp_table2(i,j)*(-1)**(dane%n_alpha+1)
             end do
          end if
       end do
@@ -1609,7 +1609,7 @@ if (dane%relativistic .eqv. .true.) then
       do j=1,dane%n_strings_beta_p1
          if (dane%beta_annihilation_matrix_p1(orbital,j,1) .ne. 0) then
             do i=1,dane%n_strings_alpha_m1
-               new_temp_table3(i,dane%beta_annihilation_matrix_p1(orbital,j,1)) = dane%beta_annihilation_matrix_p1(orbital,j,1)*temp_table3(i,j)*(-1)**(dane%n_alpha-1)
+               new_temp_table3(i,dane%beta_annihilation_matrix_p1(orbital,j,1)) = dane%beta_annihilation_matrix_p1(orbital,j,2)*temp_table3(i,j)*((-1)**(dane%n_alpha-1))
             end do
          end if
       end do
@@ -1641,13 +1641,15 @@ end do
 end if
 end subroutine create_hole
 
-subroutine diff_spin_product(new_state_alpha,new_dane_alpha,new_state_beta,new_dane_beta,scalar_product,sign)
+subroutine diff_spin_product(new_state_alpha,new_dane_alpha,new_state_beta,new_dane_beta,scalar_product,sign,left_spin)
 type(parameters), intent(in) :: new_dane_alpha, new_dane_beta
+type(parameters) :: temp_dane_alpha, temp_dane_beta
 complex(8), intent(in) :: new_state_alpha(new_dane_alpha%size_tot(1,2)+new_dane_alpha%size_tot(2,2)+new_dane_alpha%size_tot(3,2)),new_state_beta(new_dane_beta%size_tot(1,2)+new_dane_beta%size_tot(2,2)+new_dane_beta%size_tot(3,2))
-integer, intent(in) :: sign
+integer, intent(in) :: sign, left_spin
 complex(8), intent(out) :: scalar_product
 integer :: i
 scalar_product = 0
+
 !ALPHA ALWAYS ON THE LEFT
 if ((new_dane_alpha%relativistic .eqv. .true.) .and. (new_dane_beta%relativistic .eqv. .true.)) then
 if (sign .eq. 1) then
@@ -1667,6 +1669,9 @@ do i=1,new_dane_alpha%size_tot(2,2)
    scalar_product = scalar_product + conjg(new_state_alpha(i+new_dane_alpha%size_tot(1,2)))*new_state_beta(i)
 end do
 end if
+end if
+if (left_spin .eq. -1) then
+   scalar_product = conjg(scalar_product)
 end if
 end subroutine diff_spin_product
 
@@ -1742,22 +1747,22 @@ do i=krylov_size,1,-1
 end do
 end subroutine continued_fraction
 
-subroutine mixed_continued_fraction(params1,state_1,params2,state_2,z,krylov_size,sign,fraction)
+subroutine mixed_continued_fraction(params1,state_1,params2,state_2,z,krylov_size,sign,fraction,left_spin)
 type(parameters), intent(inout) :: params1, params2
 complex(8), intent(in):: state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)), state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
 complex(8), intent(in) :: z
-integer, intent(in) :: sign
+integer, intent(in) :: sign,left_spin
 complex(8), intent(out) :: fraction
 complex(8) :: state_1_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_1_2(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)),state_1_3(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
 complex(8) :: state_2_1(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)),state_2_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2)),state_2_3(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
 complex(8) :: temp_state_1(params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2))
 complex(8) :: temp_state_2(params2%size_tot(1,2)+params2%size_tot(2,2)+params2%size_tot(3,2))
-complex(8) :: a(krylov_size), b(krylov_size)
+complex(8) :: a(krylov_size), b(krylov_size), q
 integer :: i
 
 state_1_1 = state_1
 state_2_1 = state_2
-call diff_spin_product(state_1_1,params1,state_2_1,params2,b(1),sign)
+call diff_spin_product(state_1_1,params1,state_2_1,params2,b(1),sign,left_spin)
 b(1) = b(1) + conjg(b(1))
 do i=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
    b(1) = b(1) + conjg(state_1_1(i))*state_1_1(i)
@@ -1773,8 +1778,10 @@ state_2_1 = state_2_1/b(1)
 call matrix_vector_product(params1, state_1_1, temp_state_1)
 call matrix_vector_product(params2, state_2_1, temp_state_2)
 
-call diff_spin_product(state_1_1,params1,temp_state_2,params2,a(1),sign)
-a(1) = a(1) + conjg(a(1))
+call diff_spin_product(state_1_1,params1,temp_state_2,params2,a(1),sign,left_spin)
+call diff_spin_product(temp_state_1,params1,state_2_1,params2,q,sign,left_spin)
+
+a(1) = a(1) + conjg(q)
 do i=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
    a(1) = a(1) + conjg(state_1_1(i))*temp_state_1(i)
 end do
@@ -1787,7 +1794,7 @@ end do
 state_1_2 = temp_state_1 - a(1)*state_1_1
 state_2_2 = temp_state_2 - a(1)*state_2_1
 
-call diff_spin_product(state_1_2,params1,state_2_2,params2,b(2),sign)
+call diff_spin_product(state_1_2,params1,state_2_2,params2,b(2),sign,left_spin)
 b(2) = b(2) + conjg(b(2))
 do i=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
    b(2) = b(2) + conjg(state_1_2(i))*state_1_2(i)
@@ -1803,8 +1810,10 @@ state_2_2 = state_2_2/b(2)
 call matrix_vector_product(params1, state_1_2, temp_state_1)
 call matrix_vector_product(params2, state_2_2, temp_state_2)
 
-call diff_spin_product(state_1_2,params1,temp_state_2,params2,a(2),sign)
-a(2) = a(2) + conjg(a(2))
+call diff_spin_product(state_1_2,params1,temp_state_2,params2,a(2),sign,left_spin)
+call diff_spin_product(temp_state_1,params1,state_2_2,params2,q,sign,left_spin)
+
+a(2) = a(2) + conjg(q)
 do i=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
    a(2) = a(2) + conjg(state_1_2(i))*temp_state_1(i)
 end do
@@ -1817,7 +1826,7 @@ if (krylov_size .gt. 2) then
    do i=3,krylov_size
       state_1_3 = temp_state_1 - a(i-1)*state_1_2 - b(i-1)*state_1_1
       state_2_3 = temp_state_2 - a(i-1)*state_2_2 - b(i-1)*state_2_1
-      call diff_spin_product(state_1_3,params1,state_2_3,params2,b(i),sign)
+      call diff_spin_product(state_1_3,params1,state_2_3,params2,b(i),sign,left_spin)
       b(i) = b(i) + conjg(b(i))
       
       do j=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
@@ -1834,8 +1843,10 @@ if (krylov_size .gt. 2) then
       call matrix_vector_product(params1, state_1_3, temp_state_1)
       call matrix_vector_product(params2, state_2_3, temp_state_2)
 
-      call diff_spin_product(state_1_3,params1,temp_state_2,params2,a(i),sign)
-      a(i) = a(i) + conjg(a(i))
+      call diff_spin_product(state_1_3,params1,temp_state_2,params2,a(i),sign,left_spin)
+      call diff_spin_product(temp_state_1,params1,state_2_3,params2,q,sign,left_spin)
+
+      a(i) = a(i) + conjg(q)
       do j=1,params1%size_tot(1,2)+params1%size_tot(2,2)+params1%size_tot(3,2)
          a(i) = a(i) + conjg(state_1_3(j))*temp_state_1(j)
       end do
@@ -1853,7 +1864,7 @@ end if
 a = a * sign
 fraction = 0
 do i=krylov_size,1,-1
-   fraction = b(i)**2/(z - a(i) - fraction)
+   fraction = (b(i)**2)/(z - a(i) - fraction)
 end do
 end subroutine mixed_continued_fraction
 
@@ -1879,9 +1890,9 @@ else
       call continued_fraction(params1,state_1+state_2,omega+gs_energy,krylov_size,1,fraction_plus)
       call continued_fraction(params1,(0.0d0,-1.0d0)*state_1+state_2,omega+gs_energy,krylov_size,1,fraction_i)
       gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
-   else
-      call mixed_continued_fraction(params1,state_1,params2,state_2,omega+gs_energy,krylov_size,1,fraction_plus)
-      call mixed_continued_fraction(params1,(0.0d0,-1.0d0)*state_1,params2,state_2,omega+gs_energy,krylov_size,1,fraction_i)
+   else 
+      call mixed_continued_fraction(params1,state_1,params2,state_2,omega+gs_energy,krylov_size,1,fraction_plus,spin1)
+      call mixed_continued_fraction(params1,(0.0d0,-1.0d0)*state_1,params2,state_2,omega+gs_energy,krylov_size,1,fraction_i,spin1)
       gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
    end if
 end if
@@ -1912,8 +1923,8 @@ else
       call continued_fraction(params1,(0.0d0,1.0d0)*state_1+state_2,omega-gs_energy,krylov_size,-1,fraction_i)
       gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
    else
-      call mixed_continued_fraction(params1,state_1,params2,state_2,omega-gs_energy,krylov_size,-1,fraction_plus)
-      call mixed_continued_fraction(params1,(0.0d0,1.0d0)*state_1,params2,state_2,omega-gs_energy,krylov_size,-1,fraction_i)
+      call mixed_continued_fraction(params1,state_1,params2,state_2,omega-gs_energy,krylov_size,-1,fraction_plus,spin1)
+      call mixed_continued_fraction(params1,(0.0d0,1.0d0)*state_1,params2,state_2,omega-gs_energy,krylov_size,-1,fraction_i,spin1)
       gf = 0.5*(fraction_plus-(0.0d0,1.0d0)*fraction_i-(1.0d0,-1.0d0)*(fraction1+fraction2))
    end if
 end if

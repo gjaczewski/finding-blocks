@@ -18,7 +18,7 @@ integer :: n_pairs = 6
 real(8) :: nuclear_energy
 !*********HERE ARE OTHER VARIABLES*********
 PetscErrorCode :: ierr
-type(parameters), target, save :: gs_params, params2
+type(parameters), target, save :: gs_params, params2, params3
 complex(8), allocatable :: gf1(:,:), gf2(:,:)
 complex(8), allocatable :: interaction_temp(:,:)
 integer :: i,j,k,l,p,q
@@ -127,10 +127,10 @@ hso_ba = hso_ab
 call generate_params(gs_params,relativistic,n_orb,n_alpha,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
 gs_params%nuclear_energy = nuclear_energy
 N = gs_params%size_tot(1,2) + gs_params%size_tot(2,2) + gs_params%size_tot(3,2)
-allocate(eigenenergies(n_pairs))
-allocate(eigenstates(n_pairs,N))
+allocate(eigenenergies(N))
+allocate(eigenstates(N,N))
 allocate(ground_state(N))
-call eigensystem(gs_params,n_pairs,eigenenergies,eigenstates,ierr)
+call eigensystem(gs_params,N,eigenenergies,eigenstates,ierr)
 ground_state = eigenstates(1,:)
 gs_energy = eigenenergies(1)
 
@@ -141,13 +141,15 @@ deallocate(eigenstates)
 
 
 
-call generate_params(params2,relativistic,n_orb,n_alpha,n_beta-1,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
+call generate_params(params2,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
 params2%nuclear_energy = nuclear_energy
-N = params2%size_tot(1,2) + params2%size_tot(2,2) + params2%size_tot(3,2)
-allocate(eigenenergies(4))
-allocate(eigenstates(4,N))
-call eigensystem(params2,4,eigenenergies,eigenstates,ierr)
 
+call generate_params(params3,relativistic,n_orb,n_alpha,n_beta+1,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
+params3%nuclear_energy = nuclear_energy
+!N = params2%size_tot(1,2) + params2%size_tot(2,2) + params2%size_tot(3,2)
+!allocate(eigenenergies(N))
+!allocate(eigenstates(N,N))
+!call eigensystem(params2,N,eigenenergies,eigenstates,ierr)
 allocate(gf1(n_orb,n_orb))
 allocate(gf2(n_orb,n_orb))
 !HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
@@ -156,39 +158,39 @@ krylov_size = 1000
 !call generate_params(gf_params,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix, hso_ab, hso_ba)
 gf1(:,:) = 0
 gf2(:,:) = 0
-allocate(new_states(4,4))
+!allocate(new_states(n_orb,N))
 
 omega = (1.0d0,0.05d0)
 !call create_electron(1,[(0.0d0,0.0d0),(0.0d0,0.0d0),(0.0d0,0.0d0),(1.0d0,0.0d0)],new_state1,gs_params,params2,1)
-do i=1,n_orb
-    call create_electron(i,ground_state,new_states(i,:),gs_params,params2,1)
-end do
+!do i=1,n_orb
+!    call create_hole(i,ground_state,new_states(i,:),gs_params,params2,-1)
+!end do
 
+
+!do i=1,n_orb
+!    do j=1,n_orb
+!        do k=1,N
+!            r1=0
+!            r2=0
+!            do l=1,N
+!                r1 = r1 + conjg(new_states(i,l))*eigenstates(k,l)
+!                r2 = r2 + conjg(eigenstates(k,l))*new_states(j,l)
+!            end do
+!            gf2(i,j) = gf2(i,j) + r1*r2/(omega+eigenenergies(k)-gs_energy)
+!        end do
+!    end do
+!end do
+
+!write(*,*) "GF:"
+!write(*,*) gf2(1,1)
+!write(*,*) gf2(2,2)
+!write(*,*) gf2(1,2)
+!write(*,*) gf2(2,1)
+!write(*,*) "*********"
 
 do i=1,n_orb
     do j=1,n_orb
-        do k=1,2
-            r1=0
-            r2=0
-            do l=1,2
-                r1 = r1 + conjg(new_states(i,l))*eigenstates(k,l)
-                r2 = r2 + conjg(eigenstates(k,l))*new_states(j,l)
-            end do
-            gf2(i,j) = gf2(i,j) + r1*r2/(omega-eigenenergies(k)+gs_energy)
-        end do
-    end do
-end do
-
-write(*,*) "GF:"
-write(*,*) gf2(1,1)
-write(*,*) gf2(2,2)
-write(*,*) gf2(1,2)
-write(*,*) gf2(2,1)
-write(*,*) "*********"
-
-do i=1,n_orb
-    do j=1,n_orb
-        call calc_e_gf(i,j,1,1,params2,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf1(i,j))
+        call calc_e_gf(i,j,-1,1,params3,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf1(i,j))
     end do
 end do
 
