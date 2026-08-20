@@ -141,10 +141,10 @@ deallocate(eigenstates)
 
 
 
-call generate_params(params2,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
+call generate_params(params2,relativistic,n_orb,n_alpha,n_beta-1,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
 params2%nuclear_energy = nuclear_energy
 
-call generate_params(params3,relativistic,n_orb,n_alpha,n_beta+1,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
+call generate_params(params3,relativistic,n_orb,n_alpha-1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
 params3%nuclear_energy = nuclear_energy
 !N = params2%size_tot(1,2) + params2%size_tot(2,2) + params2%size_tot(3,2)
 !allocate(eigenenergies(N))
@@ -190,7 +190,7 @@ omega = (1.0d0,0.05d0)
 
 do i=1,n_orb
     do j=1,n_orb
-        call calc_e_gf(i,j,-1,1,params3,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf1(i,j))
+        call calc_h_gf(i,j,-1,1,params2,params3,gs_params,ground_state,gs_energy,omega,krylov_size,gf1(i,j))
     end do
 end do
 
