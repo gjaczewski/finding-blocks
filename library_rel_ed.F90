@@ -1975,7 +1975,6 @@ ptr_dane => params
 ptr_przekatna => diagonal
 N = params%size_tot(1,2) + params%size_tot(2,2) + params%size_tot(3,2)
 
-
 call MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, &
                       N, N, PETSC_NULL_INTEGER, A, ierr)
 
@@ -1988,14 +1987,16 @@ call EPSSetOperators(eps, A, PETSC_NULL_MAT, ierr)
 call EPSSetProblemType(eps, EPS_HEP, ierr)
 
 call EPSSetType(eps,EPSJD, ierr)
-  
+
   
 call EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL, ierr)
+
 call EPSSetDimensions(eps, n_pairs, PETSC_DECIDE, PETSC_DECIDE, ierr)
+
 call EPSSetFromOptions(eps, ierr)
-  
-  
+
 call EPSSolve(eps, ierr)
+
 if (ierr .ne. 0) then
     print *, "BŁĄD: EPSSolve nie powiodło się! Kod:", ierr
     stop
@@ -2010,9 +2011,9 @@ do i = 0,nconv - 1
                          vector_petsc, im_vector_petsc, ierr)
     
     call VecGetArrayRead(vector_petsc, tablica_wynikowa, ierr)
-    print *, "Eigenvalue no.", i + 1, "=", real(real_part) + params%nuclear_energy
+    print *, "Eigenvalue no.", i + 1, "=", real(real_part) 
     if (i .lt. n_pairs) then
-    eigenenergies(i+1) = real(real_part) + params%nuclear_energy
+    eigenenergies(i+1) = real(real_part) 
     eigenstates(i+1,:) = tablica_wynikowa
     end if
   end do
