@@ -26,6 +26,11 @@ type :: parameters
     complex(8), allocatable :: alpha_hamiltonian_p1(:,:), beta_hamiltonian_p1(:,:)
     complex(8), allocatable :: alpha_hamiltonian_m1(:,:), beta_hamiltonian_m1(:,:)
     complex(8), allocatable:: diag(:)
+    
+    complex(8), allocatable :: super_one_body_hamiltonian(:,:)
+    complex(8), allocatable :: super_interaction(:,:,:,:)
+    integer, allocatable :: super_creation_annihilation_matrix(:,:,:,:)
+    integer, allocatable :: super_strings(:,:)
     real(8) :: nuclear_energy
     logical :: relativistic
 end type parameters
@@ -1139,7 +1144,7 @@ subroutine generate_params(dane,relativistic,n_orb,n_alpha,n_beta,n_RAS_spaces_o
    complex(8), intent(inout) :: hopping_alpha(n_orb,n_orb),hopping_beta(n_orb,n_orb),interaction_alpha(n_orb,n_orb,n_orb,n_orb),interaction_beta(n_orb,n_orb,n_orb,n_orb), interaction_mix(n_orb,n_orb,n_orb,n_orb), hso_ab(n_orb,n_orb), hso_ba(n_orb,n_orb)
    integer :: max,n_spaces,n_combinations, temp, n_distributions_alpha,n_distributions_beta,n_distributions_alpha_p1,n_distributions_beta_p1,n_distributions_alpha_m1,n_distributions_beta_m1,NRD_spin_alpha,NRD_spin_beta
    integer :: NRDa(3,2),NRDb(3,2),sizea(3,2),sizeb(3,2)
-   integer :: i,j
+   integer :: i,j,k,l
    integer, allocatable :: all_combinations(:,:),RAS_el_array_alpha(:,:),RAS_el_array_beta(:,:)
    call check_orbital_space_declarations(n_orb,n_RAS_spaces_occ,RAS_space_occ,n_RAS_spaces_virt,RAS_space_virt,active_space,n_alpha,n_beta)
 
@@ -1357,7 +1362,64 @@ dane%n_strings_alpha_p1 = sizea(2,2)
 dane%n_strings_beta_p1 = sizeb(2,2)
 dane%n_strings_alpha_m1 = sizea(3,2)
 dane%n_strings_beta_m1 = sizeb(3,2)
+allocate(dane%super_one_body_hamiltonian(2*n_orb, 2*n_orb))
+allocate(dane%super_interaction(2*n_orb, 2*n_orb, 2*n_orb, 2*n_orb))
+allocate(dane%super_creation_annihilation_matrix(2*n_orb,2*n_orb,dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2),2))
+dane%super_one_body_hamiltonian(:,:) = 0
+dane%super_interaction(:,:,:,:) = 0
+dane%super_creation_annihilation_matrix(:,:,:,:) = 0
+do i=1,n_orb
+   do j=1,n_orb
+      dane%super_one_body_hamiltonian(i,j) = hopping_alpha(i,j)
+      dane%super_one_body_hamiltonian(i+n_orb,j+n_orb) = hopping_beta(i,j)
+      dane%super_one_body_hamiltonian(i,j+n_orb) = hso_ab(i,j)
+      dane%super_one_body_hamiltonian(i+n_orb,j) = hso_ba(i,j)
+      do k=1, n_orb
+         dane%super_one_body_hamiltonian(i,j) = dane%super_one_body_hamiltonian(i,j) + interaction_alpha(i,k,j,k)*0.5 + interaction_mix(i,k,j,k)*0.5
+         dane%super_one_body_hamiltonian(i+n_orb,j+n_orb) = dane%super_one_body_hamiltonian(i+n_orb,j+n_orb) + interaction_beta(i+n_orb,k+n_orb,j+n_orb,k+n_orb)*0.5 + interaction_mix(i,k,j,k)*0.5
+         do l=1, n_orb
+            dane%super_interaction(i,j,k,l) = interaction_alpha(i,j,k,l)
+            dane%super_interaction(i+n_orb,j+n_orb,k+n_orb,l+n_orb) = interaction_beta(i,j,k,l)
+            dane%super_interaction(i,j+n_orb,k,l+n_orb) = interaction_mix(i,j,k,l)
+            dane%super_interaction(i+n_orb,j,k+n_orb,l) = interaction_mix(i,j,k,l)
+         end do
+      end do
+   end do
+end do
+allocate(dane%super_strings(dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2),dane%n_alpha+dane%n_beta))
+call fill_super_strings(dane)
+
 end subroutine generate_params
+!!!!!!!!!!!!!!!!!!!!!!!
+subroutine fill_super_strings(dane)
+implicit none
+type(parameters), intent(inout) :: dane
+integer :: i,j,p
+p = 1
+do i=1, dane%n_strings_alpha
+    do j=1, dane%n_strings_beta
+        dane%super_strings(p,1:dane%n_alpha) = dane%str_a(i,:) 
+        dane%super_strings(p,dane%n_alpha+1:dane%n_alpha+dane%n_beta) = dane%str_b(j,:) + dane%n_orb
+        p = p + 1
+    end do
+end do
+
+do i=1, dane%n_strings_alpha_p1
+    do j=1, dane%n_strings_beta_m1
+        dane%super_strings(p,1:dane%n_alpha+1) = dane%str_a_p1(i,:) 
+        dane%super_strings(p,dane%n_alpha+2:dane%n_alpha+dane%n_beta) = dane%str_b_m1(j,:) + dane%n_orb
+        p = p + 1
+    end do
+end do
+
+do i=1, dane%n_strings_alpha_m1
+    do j=1, dane%n_strings_beta_p1
+        dane%super_strings(p,1:dane%n_alpha-1) = dane%str_a_m1(i,:) 
+        dane%super_strings(p,dane%n_alpha:dane%n_alpha+dane%n_beta) = dane%str_b_p1(j,:) + dane%n_orb
+        p = p + 1
+    end do
+end do
+end subroutine fill_super_strings
 !!!!!!!!!!!!!!!!!!!!!!!
 subroutine create_electron(orbital,state,new_state,dane,new_dane,spin)
 type(parameters), intent(in) :: dane, new_dane
