@@ -906,19 +906,9 @@ do i=1,n_strings_alpha
    do j=1,n_strings_beta
       do k=1,n_strings_alpha
          new_table(i,j) = new_table(i,j) + temp_table(k,j)*alpha_hamiltonian(i,k)
-         if (new_table(i,j) /= new_table(i,j)) then
-          print *, 'NaN pojawil sie dla', i,j,k 
-          stop
-         end if
       end do
       do l=1,n_strings_beta
          new_table(i,j) = new_table(i,j) + temp_table(i,l)*beta_hamiltonian(j,l)
-         if (new_table(i,j) /= new_table(i,j)) then
-          print *, 'NaN pojawil sie dla', i,j,k,l 
-          write(*,*) temp_table(i,l)
-          write(*,*) beta_hamiltonian(j,l)
-          stop
-         end if
       end do
       do p=1,n_alpha
          do r=1,n_orb
@@ -931,10 +921,6 @@ do i=1,n_strings_alpha
                      if (temp_state2 .ne. 0) then
                         temp_sign2 = temp_sign1*beta_annihilation_creation_matrix(s,strings_beta(j,q),j,2)
                         new_table(i,j) = new_table(i,j) + temp_sign2*temp_table(temp_state1,temp_state2)*interaction_mix(strings_alpha(i,p),strings_beta(j,q),r,s)
-                        if (new_table(i,j) /= new_table(i,j)) then
-                           print *, 'NaN pojawil sie dla', i,j,p,r,q,s
-                           stop
-                        end if
                      end if 
                   end do
                end do   
@@ -970,24 +956,7 @@ vector_new_3(:) = 0
 call nr_matrix_vector_product(dane%alpha_hamiltonian,dane%str_a,dane%n_strings_alpha,dane%n_alpha,dane%beta_hamiltonian,dane%str_b,dane%n_strings_beta,dane%n_beta,dane%interaction_mix,dane%n_orb,dane%alpha_annihilation_creation_matrix,dane%beta_annihilation_creation_matrix,vector(dane%size_tot(1,1):dane%size_tot(1,2)),vector_new_1)
 call nr_matrix_vector_product(dane%alpha_hamiltonian_p1,dane%str_a_p1,dane%n_strings_alpha_p1,dane%n_alpha+1,dane%beta_hamiltonian_m1,dane%str_b_m1,dane%n_strings_beta_m1,dane%n_beta-1,dane%interaction_mix,dane%n_orb,dane%alpha_annihilation_creation_matrix_p1,dane%beta_annihilation_creation_matrix_m1,vector(dane%size_tot(2,1):dane%size_tot(1,2)+dane%size_tot(2,2)),vector_new_2)
 call nr_matrix_vector_product(dane%alpha_hamiltonian_m1,dane%str_a_m1,dane%n_strings_alpha_m1,dane%n_alpha-1,dane%beta_hamiltonian_p1,dane%str_b_p1,dane%n_strings_beta_p1,dane%n_beta+1,dane%interaction_mix,dane%n_orb,dane%alpha_annihilation_creation_matrix_m1,dane%beta_annihilation_creation_matrix_p1,vector(dane%size_tot(3,1):dane%size_tot(1,2)+dane%size_tot(2,2)+dane%size_tot(3,2)),vector_new_3)
-do i = 1, dane%n_strings_alpha*dane%n_strings_beta
-   if (vector_new_1(i) /= vector_new_1(i)) then
-      print *, "NaN pojawił się w pętli 1 dla i =", i
-      stop
-   end if
-end do
-do i = 1, dane%n_strings_alpha_p1*dane%n_strings_beta_m1
-   if (vector_new_2(i) /= vector_new_2(i)) then
-      print *, "NaN pojawił się w pętli 2 dla i =", i
-      stop
-   end if
-end do
-do i = 1, dane%n_strings_alpha_m1*dane%n_strings_beta_p1
-   if (vector_new_3(i) /= vector_new_3(i)) then
-      print *, "NaN pojawił się w pętli 3 dla i =", i
-      stop
-   end if
-end do
+
 new_table1(:,:) = 0
 new_table2(:,:) = 0
 new_table3(:,:) = 0
@@ -1969,7 +1938,7 @@ Mat            :: A
 EPS            :: eps
 integer              :: nconv
 complex(8),target :: diagonal(params%size_tot(1,2)+params%size_tot(2,2)+params%size_tot(3,2))
-
+write(*,*) "Eigensystem start"
 diagonal = params%diag
 ptr_dane => params
 ptr_przekatna => diagonal
@@ -1986,7 +1955,7 @@ call EPSSetOperators(eps, A, PETSC_NULL_MAT, ierr)
 
 call EPSSetProblemType(eps, EPS_HEP, ierr)
 
-call EPSSetType(eps,EPSJD, ierr)
+call EPSSetType(eps,EPSGD, ierr)
 
   
 call EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL, ierr)
@@ -1994,9 +1963,8 @@ call EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL, ierr)
 call EPSSetDimensions(eps, n_pairs, PETSC_DECIDE, PETSC_DECIDE, ierr)
 
 call EPSSetFromOptions(eps, ierr)
-
+write(*,*) "Solving..."
 call EPSSolve(eps, ierr)
-
 if (ierr .ne. 0) then
     print *, "BŁĄD: EPSSolve nie powiodło się! Kod:", ierr
     stop

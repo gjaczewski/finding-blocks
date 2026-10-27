@@ -13,8 +13,8 @@ logical:: relativistic
 complex(8), allocatable :: hopping_alpha(:,:),hopping_beta(:,:),interaction_alpha(:,:,:,:),interaction_beta(:,:,:,:),interaction_mix(:,:,:,:), hso_ab(:,:), hso_ba(:,:)
 real(8), allocatable :: orbital_energies(:)
 integer :: krylov_size
-integer :: n_pairs = 100
-
+integer :: n_pairs = 1
+real(8) :: mu
 real(8) :: nuclear_energy
 !*********HERE ARE OTHER VARIABLES*********
 PetscErrorCode :: ierr
@@ -37,11 +37,11 @@ call cpu_time(start_time)
 
 !*******HERE USER DEFINES VARIABLES********
 
-relativistic=.true.
+relativistic=.false.
 n_orb = 10
-n_alpha = 9
-n_beta = 9
-
+n_alpha = 8
+n_beta = 8
+mu = 4
 n_RAS_spaces_occ=0
 n_RAS_spaces_virt=0
 
@@ -76,7 +76,7 @@ allocate(hso_ba(n_orb,n_orb))
 open(unit = 1, file = "integrals/mo_energies.txt")
 open(unit = 2, file = "integrals/h_upup.txt")
 open(unit = 4, file = "integrals/h_dndn.txt")
-open(unit = 3, file = "integrals/eri_mo.txt")
+!open(unit = 3, file = "integrals/eri_mo.txt")
 open(unit = 5, file = "integrals/h_updn.txt")
 open(unit = 7, file = "integrals/h_dnup.txt")
 open(unit = 8, file = "integrals/nuc_energy.txt")
@@ -90,11 +90,15 @@ end do
     read(8,*) nuclear_energy
 allocate(interaction_temp(n_orb**2,n_orb**2))
 do i=1,n_orb**2
-    read(3,*) interaction_temp(i,:)
+  !  read(3,*) interaction_temp(i,:)
 end do 
 
 p = 1
 do i=1,n_orb
+  if (i .ge. 9) then
+    hopping_alpha(i,i) = hopping_alpha(i,i) - mu
+    hopping_beta(i,i) = hopping_beta(i,i) - mu
+  end if
     do j=1,n_orb
         q = 1
         do k=1,n_orb
@@ -106,9 +110,9 @@ do i=1,n_orb
         p = p + 1
     end do
 end do
-!interaction_alpha(:,:,:,:) = 0
-!interaction_alpha(1,1,1,1) = 4
-!interaction_alpha(2,2,2,2) = 4
+interaction_alpha(:,:,:,:) = 0
+interaction_alpha(9,9,9,9) = 8
+interaction_alpha(10,10,10,10) = 8
 interaction_beta = interaction_alpha
 interaction_mix = interaction_alpha
 !interaction_mix(1,1,1,1) = 4
@@ -140,65 +144,7 @@ deallocate(eigenstates)
 
 
 
-call generate_params(params2,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
-params2%nuclear_energy = nuclear_energy
 
-!call generate_params(params3,relativistic,n_orb,n_alpha,n_beta-1,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta, interaction_mix, hso_ab, hso_ba)
-!params3%nuclear_energy = nuclear_energy
-N = params2%size_tot(1,2) + params2%size_tot(2,2) + params2%size_tot(3,2)
-n_pairs = 10
-allocate(eigenenergies(n_pairs))
-allocate(eigenstates(n_pairs,N))
-call eigensystem(params2,n_pairs,eigenenergies,eigenstates,ierr)
-allocate(gf1(n_orb,n_orb))
-allocate(gf2(n_orb,n_orb))
-!HERE WE START GENERATING ELECTRONIC GREEN FUNCTION
-!BLOCK n_alpha+1
-krylov_size = 1000
-!call generate_params(gf_params,relativistic,n_orb,n_alpha+1,n_beta,n_RAS_spaces_occ,n_RAS_spaces_virt,RAS_space_occ,RAS_space_virt,active_space,excit_array,orbital_energies,hopping_alpha,hopping_beta,interaction_alpha,interaction_beta,interaction_mix, hso_ab, hso_ba)
-gf1(:,:) = 0
-gf2(:,:) = 0
-allocate(new_states(n_orb,N))
-
-omega = (1.0d0,0.05d0)
-!call create_electron(1,[(0.0d0,0.0d0),(0.0d0,0.0d0),(0.0d0,0.0d0),(1.0d0,0.0d0)],new_state1,gs_params,params2,1)
-do i=1,n_orb
-    call create_electron(i,ground_state,new_states(i,:),gs_params,params2,1)
-end do
-
-
-do i=1,n_orb
-    do j=1,n_orb
-        do k=1,N
-            r1=0
-            r2=0
-            do l=1,N
-                r1 = r1 + conjg(new_states(i,l))*eigenstates(k,l)
-                r2 = r2 + conjg(eigenstates(k,l))*new_states(j,l)
-            end do
-            gf2(i,j) = gf2(i,j) + r1*r2/(omega-eigenenergies(k)+gs_energy)
-        end do
-    end do
-end do
-
-write(*,*) "GF:"
-do i=1,n_orb
-    do j=1,n_orb
-        write(*,*) i,j, gf2(i,j)
-    end do
-end do
-write(*,*) "*********"
-
-do i=1,n_orb
-    do j=1,n_orb
-        call calc_e_gf(i,j,1,1,params2,params2,gs_params,ground_state,gs_energy,omega,krylov_size,gf1(i,j))
-    end do
-end do
-do i=1,n_orb
-    do j=1,n_orb
-        write(*,*) i,j, gf1(i,j)-gf2(i,j)
-    end do
-end do
 write(*,*) "KONIEC"
 call cpu_time(end_time)
 total_time = end_time - start_time
